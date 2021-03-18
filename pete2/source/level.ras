@@ -63,6 +63,11 @@ var
 	scoreAddGetKey: array[] of byte = ($25, $00, $00, $00, $00);
 	scoreAddNewLevel: array[] of byte = ($50, $00, $00, $00, $00);
 
+	scoreAddBoulderHit2: array[] of byte = ($20, $00, $00, $00, $00);
+	scoreAddBoulderJump2: array[] of byte = ($10, $00, $00, $00, $00);
+	scoreAddGetPick2: array[] of byte = ($50, $00, $00, $00, $00);
+	scoreAddGetKey2: array[] of byte = ($50, $00, $00, $00, $00);
+
 
 function GetLevelParameter(sequence : pointer) : byte;
 var
@@ -230,14 +235,14 @@ begin
 	screenmemory := screenmemory + (23*40) + 11;
 	screencolor := screencolor + (23*40) + 11;
 
-	screenmemory[0] := 89;					
+	screenmemory[0] := 30;					
 	screencolor[0] := yellow;
 
 	screenmemory := screenmemory + 6;
 	screencolor := screencolor + 6;
 
 	// HI
-	screenmemory[0] := 88;					
+	screenmemory[0] := 29;					
 	screencolor[0] := yellow;
 
 
@@ -348,45 +353,55 @@ begin
 
 	//level_colour := blue;
 
-	for dbl_y := 0 to 25 do
+	if (level_colour <> black) then
 	begin
-	
-		for dbl_x := 0 to 10 do
+
+		for dbl_y := 0 to 25 do
 		begin
-			screenmemory[0] := 25;
-			screencolor[0] := level_colour + 8;
-			inc(screenmemory);
-			inc(screencolor);
+
+			for dbl_x := 0 to 10 do
+			begin
+				screenmemory[0] := 25;
+				screencolor[0] := level_colour + 8;
+				inc(screenmemory);
+				inc(screencolor);
+			end;
+			for dbl_x := 10 to 18 do
+			begin
+				screenmemory[0] := 24;
+				screencolor[0] := level_colour + 8;
+				inc(screenmemory);
+				inc(screencolor);
+			end;
+			for dbl_x := 18 to 22 do
+			begin
+				screenmemory[0] := 23;
+				screencolor[0] := level_colour + 8;
+				inc(screenmemory);
+				inc(screencolor);
+			end;
+			for dbl_x := 22 to 30 do
+			begin
+				screenmemory[0] := 24;
+				screencolor[0] := level_colour + 8;
+				inc(screenmemory);
+				inc(screencolor);
+			end;
+			for dbl_x := 30 to 40 do
+			begin
+				screenmemory[0] := 25;
+				screencolor[0] := level_colour + 8;
+				inc(screenmemory);
+				inc(screencolor);
+			end;
+
 		end;
-		for dbl_x := 10 to 18 do
-		begin
-			screenmemory[0] := 24;
-			screencolor[0] := level_colour + 8;
-			inc(screenmemory);
-			inc(screencolor);
-		end;
-		for dbl_x := 18 to 22 do
-		begin
-			screenmemory[0] := 23;
-			screencolor[0] := level_colour + 8;
-			inc(screenmemory);
-			inc(screencolor);
-		end;
-		for dbl_x := 22 to 30 do
-		begin
-			screenmemory[0] := 24;
-			screencolor[0] := level_colour + 8;
-			inc(screenmemory);
-			inc(screencolor);
-		end;
-		for dbl_x := 30 to 40 do
-		begin
-			screenmemory[0] := 25;
-			screencolor[0] := level_colour + 8;
-			inc(screenmemory);
-			inc(screencolor);
-		end;
-		
+	end
+	else
+		clearscreen(blue, screen_col_loc);
+		moveto(11,15,hi(screen_char_loc3));
+		printstring("DOUBLE POINTS LEVEL!",0,40);
+	begin
 	end;
 end;
 

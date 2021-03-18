@@ -13,7 +13,8 @@ val : byte;
 start_game : byte = 0;
 
 // Automatically export charset
-@export "charsets/charset.flf" "charsets/charset.bin" 256
+@export "charsets/combined.flf" "charsets/combined.bin" 120
+@export "charsets/charset_16x16.flf" "charsets/charset_16x16.bin" 180
 
 // Export all sprites automatically on each build
 @export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
@@ -26,14 +27,18 @@ start_game : byte = 0;
 
 	// Location of charset
 	const charsetLoc: address = $8800;
-	image_data2 : incbin("charsets/charset.bin", charsetLoc);
+	image_data2 : incbin("charsets/combined.bin", charsetLoc);
 
-@startblock $4800 "Data"
+	const charsetLoc2: address = $a000;
+	image_data3 : incbin("charsets/charset_16x16.bin", charsetLoc2);
+
+
+/*@startblock $4800 "Data"
 	image1_color: IncBin("images/pete_color.bin")compressed;
 @endblock
 @startblock $9000 "Data"
 	image1_data: IncBin("images/pete_data.bin") compressed;
-@endblock
+@endblock*/
 	
 	// Address of screen bitmap data
 	const dataAddress : address = $6000;
@@ -66,37 +71,138 @@ begin
 	Compression::Decompress(data, #dataAddress); 
 end;
 
+procedure Draw16x16Character(char : byte, x_loc : integer, y_loc : integer, colour : byte);
+var
+start_char_loc : integer;
+begin
+
+	start_char_loc := 40 * y_loc + x_loc;// + 10;
+
+	screenmemory := #screen_char_loc3;// + $4000;		
+	screencolor := #screen_col_loc;
+
+	screenmemory := screenmemory + start_char_loc;
+	screenmemory[0] := char;					
+	screenmemory[1] := char+1;
+	screenmemory[40] := char+40;				
+	screenmemory[41] := char+41;		
+	
+	screencolor := screencolor + start_char_loc;
+	screencolor[0] := colour;
+	screencolor[1] := colour;
+	screencolor[40] := colour;
+	screencolor[41] := colour;
+		
+
+end;
 
 procedure InitStartScreen();
+var 
+	char_index : byte;
+	x, y, colour : byte;
 begin
 	definescreen();
-	SetBank(VIC_BANK0);
+	SetBank(VIC_BANK2);
 
 	screen_bg_col:=black;
 	screen_fg_col:=black;
 
 	settextmode();
 	SetRegularColorMode();
-	setcharsetlocation($1000);
+	setcharsetlocation(charsetLoc2);
 
-	clearscreen(key_space, screen_char_loc);
+	clearscreen(160, screen_char_loc3);
 	clearscreen(blue, screen_col_loc);
 
-	setcharsetlocation($1000);
 	poke(MULTICOLOR_CHAR_COL, 0, black);
 	poke(MULTICOLOR_CHAR_COL, 2, red);
 	poke(MULTICOLOR_CHAR_COL, 1, green);
 
-	moveto(13,7,hi(screen_char_loc));
+/*	moveto(13,7,hi(screen_char_loc3));
 	printstring("PICKAXE PETE",0,40);
 	
-	moveto(18,9,hi(screen_char_loc));
+	moveto(18,9,hi(screen_char_loc3));
 	printstring("BY",0,40);
-	moveto(12,11,hi(screen_char_loc));
+	moveto(12,11,hi(screen_char_loc3));
 	printstring("GARETH ALLDREAD",0,40);
 
-	moveto(10,17,hi(screen_char_loc));
-	printstring("PRESS FIRE TO START",0,40);
+	moveto(10,17,hi(screen_char_loc3));
+	printstring("PRESS FIRE TO START",0,40);*/
+
+	x := 7;
+	y := 2;
+	colour := yellow;
+	// pickaxe
+	Draw16x16Character(30, x, y, colour);
+	x := x + 2;
+
+	colour := blue;
+	Draw16x16Character(16, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(4, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(20, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(94, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 4;
+
+	//pete
+	colour := yellow;
+	Draw16x16Character(30, x, y, colour);
+	x := x + 2;
+	colour := blue;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(86, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	
+	// by
+	colour := green;
+	
+	x := 16;
+	y := 7;
+	Draw16x16Character(2, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(96, x, y, colour);
+	x := x + 2;
+
+	// gareth alldread
+	x := 4;
+	y := 10;
+	Draw16x16Character(12, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(82, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(86, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(14, x, y, colour);
+	x := x + 4;
+
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(22, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(22, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(6, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(82, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(6, x, y, colour);
+
 end;   
 
 procedure InitGameOverScreen();
@@ -131,7 +237,7 @@ begin
 	end;
 end;   
 
-
+/*
 procedure InitSplashScreen();
 begin
 	setbank(vic_bank1);
@@ -144,7 +250,7 @@ begin
 	vic_data_loc:=$18;
 	SetupImage(#image1_data, #image1_color);		
 end;   
-
+*/
 
 // This method initializes the game screen
 procedure InitGameScreen();
@@ -164,6 +270,35 @@ begin
 	poke(MULTICOLOR_CHAR_COL, 2, level_colour);
 	poke(MULTICOLOR_CHAR_COL, 1, green);
 end;   
+
+procedure InitBetweenLevelsScreen();
+begin
+	definescreen();
+	SetBank(VIC_BANK2);
+
+	screen_bg_col:=black;
+	screen_fg_col:=blue;
+	clearscreen(key_space, screen_char_loc3);
+	
+	settextmode();
+
+	
+	if (level_colour = black) then
+	begin	
+		SetRegularColorMode();
+		setcharsetlocation($1000);
+	end
+	else
+	begin
+		setcharsetlocation(charsetLoc);
+		setmulticolormode();
+	end;
+
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, level_colour);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+end;   
+
 
 // This method initializes the sprites
 procedure InitSprites();
@@ -548,7 +683,7 @@ begin
 	// pete has entered a new level
 	if (new_level_required = 1) then
 	begin
-		InitGameScreen();
+		InitBetweenLevelsScreen();
 		DisableAllActors();
 		UpdateSprites(0);	
 		ResetAllSoundChannels();

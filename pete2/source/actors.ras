@@ -1034,6 +1034,9 @@ begin
 	//rand(10,255,actors[spt_idx].ttl);
 	actors[spt_idx].ttl := mod(random(), 128) + 10;
 	
+
+	//actors[spt_idx].color := black;
+
 end;
 
 procedure SpinPortal(stt_idx : byte);

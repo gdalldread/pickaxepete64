@@ -137,7 +137,15 @@ end;
 
 procedure ScoreBoulderHit();
 begin
-	BcdAdd( #game_score, #scoreAddBoulderHit, 5 );	
+	if (level_colour = black) then
+	begin
+		BcdAdd( #game_score, #scoreAddBoulderHit2, 5 );	
+	end
+	else
+	begin
+		BcdAdd( #game_score, #scoreAddBoulderHit, 5 );	
+	end;
+
 	DrawScore();
 end;
 
@@ -145,7 +153,14 @@ procedure ScoreBoulderJump();
 begin
 	if (can_score_on_jump) then
 	begin
-		BcdAdd( #game_score, #scoreAddBoulderJump, 5 );	
+		if (level_colour = black) then
+		begin
+			BcdAdd( #game_score, #scoreAddBoulderJump2, 5 );	
+		end
+		else
+		begin
+			BcdAdd( #game_score, #scoreAddBoulderJump, 5 );	
+		end;
 		DrawScore();
 		can_score_on_jump := 0;
 	end;
@@ -153,19 +168,44 @@ end;
 
 procedure ScoreGetPick();
 begin
-	BcdAdd( #game_score, #scoreAddGetPick, 5 );	
+	if (level_colour = black) then
+	begin
+		BcdAdd( #game_score, #scoreAddGetPick2, 5 );	
+	end
+	else
+	begin
+		BcdAdd( #game_score, #scoreAddGetPick, 5 );	
+	end;
 	DrawScore();
 end;
 
 procedure ScoreGetKey();
 begin
-	BcdAdd( #game_score, #scoreAddGetKey, 5 );	
+
+	if (level_colour = black) then
+	begin
+		BcdAdd( #game_score, #scoreAddGetKey2, 5 );	
+	end
+	else
+	begin
+		BcdAdd( #game_score, #scoreAddGetKey, 5 );	
+	end;
+
 	DrawScore();
 end;
 
 procedure ScoreNewLevel();
 begin
-	BcdAdd( #game_score, #scoreAddNewLevel, 5 );	
+	if (level_colour = black) then
+	begin
+		BcdAdd( #game_score, #scoreAddNewLevel, 5 );	
+		BcdAdd( #game_score, #scoreAddNewLevel, 5 );	
+	end
+	else
+	begin
+		BcdAdd( #game_score, #scoreAddNewLevel, 5 );	
+	end;
+
 	DrawScore();
 end;
 
