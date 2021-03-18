@@ -1,0 +1,852 @@
+
+var  
+	//////////////////////////////////////////
+	// Sound effect id
+	// lower numbers mean lower priority
+	const boulder_bounce_idx : byte = 1;
+	const boulder_crash_idx : byte = 2;
+	const pick_hold_idx : byte = 3;
+	const pick_End_idx : byte = 4;
+	const game_start_idx : byte = 5;
+	const key_spin_idx : byte = 6;
+	const key_flash_idx : byte = 7;
+	const pick_spin_idx : byte = 8;
+	const fireball_idx : byte = 9;
+	const collect_pick_idx : byte = 10;
+	const collect_key_idx : byte = 11;
+	const jump_idx : byte = 12;
+	const between_levels_idx : byte = 13;
+	const die_idx : byte = 14;
+	const dead_idx : byte = 15;
+	const rebound_idx : byte = 16;
+
+	//////////////////////////////////////////
+	// Sound effect "after effect" type	
+	const no_sound_modulation : byte = 0;
+	const repeat_sound_modulation : byte = 1;
+	const ascend_sound_modulation : byte = 2;
+	const descend_sound_modulation : byte = 3;
+	const notes_sound_modulation : byte = 3;
+
+	//////////////////////////////////////////
+	
+	const start_notes_idx : byte = 0;
+	const collect_pick_notes_idx : byte = 4;
+	const collect_key_notes_idx : byte = 7;
+	const jump_notes_idx : byte = 12;
+	const die_notes_idx : byte = 15;
+	const dead_notes_idx : byte = 46;
+	const rebound_notes_idx : byte = 46;
+	notes_data : array[40] of byte = (	3,60,40,80, // 0
+										2,40,80,	// 4
+										4,40,30,40,80, 	// 7
+										2,40,80, 	// 12
+										30,80,70,60,50,40,80,70,60,50,40,80,70,60,50,40,80,70,60,50,40,80,70,60,50,40,80,70,60,50,40, 	// 15
+										3,30,20,10,	// 46
+										2,80,40, 	// 50
+									);
+	//////////////////////////////////////////
+
+	effect_type = record
+		enabled : byte = 0;
+		counter : byte = 0;
+		ttl : byte = 0;
+		volume : byte = 0;
+		frequency : byte = 0;
+		attack : byte = 0;
+		sus_release : byte = 0;
+		waveform : byte = 0;
+		modulation : byte = 0;		
+		modulation_delay : byte = 0; // higher number is slower steps
+		modulation_counter : byte = 0;	
+		modulation_velocity : byte = 0;  // parameter to apply to each step in the effect
+		modulation_notes : byte = 0;
+		notes_counter : byte = 0;
+		effect_id : byte = 0; // also serves as priority
+		actor_id : byte = 0;
+	end;
+
+	// Number of simultaneous effects
+	const max_effects : byte = 3;
+	// Monster array allocation will fail if it is an array. 
+	effects : array[max_effects] of effect_type;
+	//const channel_lookup : array[3] of byte = (sid_channel1, sid_channel2, sid_channel3); 	
+
+	eIndex : byte;
+	nex_free_effect : byte;
+
+
+procedure SoundsDebugMsg();
+begin
+	for eIndex := 0 to max_effects do
+	begin
+		if (effects[eIndex].enabled = 1) then
+		begin
+			moveto(6 + eIndex * 10,2,hi(screen_char_loc));
+			printdecimal(effects[eIndex].effect_id, 4);	
+
+			moveto(6 + eIndex * 10,3,hi(screen_char_loc));
+			printdecimal(effects[eIndex].modulation_counter, 4);	
+			
+			moveto(6 + eIndex * 10,4,hi(screen_char_loc));
+			printdecimal(effects[eIndex].counter, 4);	
+
+			moveto(6 + eIndex * 10,5,hi(screen_char_loc));
+			printdecimal(effects[eIndex].ttl, 4);	
+
+// effects[eIndex].ttl
+// effects[eIndex].counter
+// effects[eIndex].modulation_counter
+		end
+		else
+		begin
+			moveto(6 + eIndex * 10,2,hi(screen_char_loc));
+			printdecimal(0, 4);	
+		end;
+	end;
+end;
+
+
+procedure ResetSoundChannel(rsIndex : byte);
+begin
+	effects[rsIndex].enabled := 0;
+	effects[rsIndex].counter := 0;
+	effects[rsIndex].ttl := 0;
+	effects[rsIndex].volume := 0;
+	effects[rsIndex].frequency := 0;
+	effects[rsIndex].attack := 0;
+	effects[rsIndex].sus_release := 0;
+	effects[rsIndex].waveform := 0;
+	effects[rsIndex].modulation := 0;		
+	effects[rsIndex].modulation_delay := 255;
+	effects[rsIndex].modulation_counter := 0;
+	effects[rsIndex].effect_id := 0; // also serves as priority
+	effects[rsIndex].modulation_velocity := 0;  // parameter to apply to each step in the effect
+	effects[rsIndex].modulation_notes := 0;
+	effects[rsIndex].notes_counter := 0;
+	effects[rsIndex].actor_id := 0;
+end;
+
+procedure ResetAllSoundChannels();
+begin
+	for eIndex := 0 to max_effects do
+	begin
+		ResetSoundChannel(eIndex);
+		if (eIndex = 0) then
+		begin
+			PlaySound(sid_channel1, 
+			0,  
+			0, 
+			0,  
+			0,
+			1 + sid_saw,
+			sid_saw);  
+		end
+		else if (eIndex = 1) then
+		begin
+			PlaySound(sid_channel2, 
+			0,  
+			0, 
+			0,  
+			0,
+			1 + sid_saw,
+			sid_saw);    
+		end
+		else if (eIndex = 2) then
+		begin
+			PlaySound(sid_channel3, 
+			0,  
+			0, 
+			0,  
+			0,
+			1 + sid_saw,
+			sid_saw);    
+		end;		
+
+	end;
+end;
+
+
+procedure UpdateAllSounds();
+var
+next_note_index : byte = 0;
+begin
+
+	for eIndex := 0 to max_effects do
+	begin
+		if (effects[eIndex].enabled = 1) then
+		begin
+			if ((effects[eIndex].ttl > 0) and (effects[eIndex].counter >= effects[eIndex].ttl))	then
+			begin
+				effects[eIndex].enabled := 0;
+				effects[eIndex].counter := 0;
+			end;
+			if (effects[eIndex].modulation_counter = 0) then 
+			begin
+				// play initial note
+				if (eIndex = 0) then
+				begin
+					
+					PlaySound(sid_channel1, 
+					effects[eIndex].volume,  
+					effects[eIndex].frequency, 
+					effects[eIndex].attack,  
+					effects[eIndex].sus_release,
+					1 + effects[eIndex].waveform,
+					effects[eIndex].waveform);  
+				end
+				else if (eIndex = 1) then
+				begin
+					
+					PlaySound(sid_channel2, 
+					effects[eIndex].volume,  
+					effects[eIndex].frequency, 
+					effects[eIndex].attack,  
+					effects[eIndex].sus_release,
+					1 + effects[eIndex].waveform,
+					effects[eIndex].waveform);  
+				end
+				else if (eIndex = 2) then
+				begin
+
+					PlaySound(sid_channel3, 
+					effects[eIndex].volume,  
+					effects[eIndex].frequency, 
+					effects[eIndex].attack,  
+					effects[eIndex].sus_release,
+					1 + effects[eIndex].waveform,
+					effects[eIndex].waveform);  
+				end;
+			end;
+			// ttl counter
+			inc(effects[eIndex].counter);
+			if (effects[eIndex].modulation_counter = 0) then 
+			begin
+				if (effects[eIndex].modulation = ascend_sound_modulation) then
+				begin
+					effects[eIndex].frequency := effects[eIndex].frequency + effects[eIndex].modulation_velocity;
+				end
+				else if (effects[eIndex].modulation = notes_sound_modulation) then
+				begin
+					next_note_index := effects[eIndex].modulation_notes	+ 1 + effects[eIndex].notes_counter;
+
+					effects[eIndex].frequency := notes_data[next_note_index];
+					inc(effects[eIndex].notes_counter);
+					if (effects[eIndex].notes_counter > notes_data[effects[eIndex].modulation_notes]) then
+					begin
+						effects[eIndex].modulation := no_sound_modulation;
+					end;
+				end;
+				effects[eIndex].modulation_counter := effects[eIndex].modulation_delay;
+			end;			
+			
+			// modulation_counter
+			// modulation : byte = 0;		
+			// modulation_delay : byte = 0;
+			if (effects[eIndex].modulation <> no_sound_modulation) then
+			begin
+				dec(effects[eIndex].modulation_counter);
+			end;
+		end;
+	end;
+end;
+
+
+/*procedure InitialiseEffects();
+begin
+	for eIndex := 0 to max_effects do
+	begin
+		effects[eIndex].enabled := 0;
+		effects[eIndex].counter := 0;
+		effects[eIndex].ttl := 0;
+		effects[eIndex].effect_id := 0;
+	end;
+end;*/
+
+procedure FindFreeEffect(priority : byte);
+var
+	lower_index : byte;
+begin
+	nex_free_effect := max_effects; // this means failed
+	lower_index := max_effects;
+	for eIndex := 0 to max_effects do
+	begin
+		if (effects[eIndex].enabled = 0) then
+		begin
+			nex_free_effect := eIndex;
+			return;
+		end
+		else if (effects[eIndex].effect_id < priority) then
+		begin
+			lower_index := eIndex;
+		end;
+	end;
+	if (nex_free_effect = max_effects) then
+	begin
+		nex_free_effect := lower_index;
+	end;
+end;
+
+procedure StopActorSound(sas_effectID : byte, sas_actor : byte);
+begin
+	for eIndex := 0 to max_effects do
+	begin
+		if ( (effects[eIndex].enabled = 1) and (effects[eIndex].effect_id = sas_effectID)) then
+		begin
+			if (effects[eIndex].actor_id = sas_actor) then
+			begin
+				effects[eIndex].enabled := 0;
+
+				if (eIndex = 0) then
+				begin
+					PlaySound(sid_channel1, 
+					0,  
+					0, 
+					0,  
+					0,
+					1 + sid_saw,
+					sid_saw);  
+				end
+				else if (eIndex = 1) then
+				begin
+					PlaySound(sid_channel2, 
+					0,  
+					0, 
+					0,  
+					0,
+					1 + sid_saw,
+					sid_saw);    
+				end
+				else if (eIndex = 2) then
+				begin
+					PlaySound(sid_channel3, 
+					0,  
+					0, 
+					0,  
+					0,
+					1 + sid_saw,
+					sid_saw);    
+				end;
+			end;
+
+		end
+	end;
+end;
+
+procedure StopSound(effectID : byte);
+begin
+	for eIndex := 0 to max_effects do
+	begin
+		if ( (effects[eIndex].enabled = 1) and (effects[eIndex].effect_id = effectID)) then
+		begin
+			effects[eIndex].enabled := 0;
+			
+			if (eIndex = 0) then
+			begin
+				PlaySound(sid_channel1, 
+				0,  
+				0, 
+				0,  
+				0,
+				1 + sid_saw,
+				sid_saw);  
+			end
+			else if (eIndex = 1) then
+			begin
+				PlaySound(sid_channel2, 
+				0,  
+				0, 
+				0,  
+				0,
+				1 + sid_saw,
+				sid_saw);    
+			end
+			else if (eIndex = 2) then
+			begin
+				PlaySound(sid_channel3, 
+				0,  
+				0, 
+				0,  
+				0,
+				1 + sid_saw,
+				sid_saw);    
+			end;
+
+
+		end
+	end;
+end;
+
+procedure PlayBetweenLevelsSound();
+var
+begin
+
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(boulder_crash_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		ResetSoundChannel(nex_free_effect);
+		// add the sound
+		effects[nex_free_effect].effect_id := between_levels_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 15*16 + 15;
+		effects[nex_free_effect].sus_release := 1*16 + 8;
+		effects[nex_free_effect].waveform := sid_noise;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 10;
+	end;
+	
+end;
+
+procedure StopBetweenLevelsSound();
+var
+begin
+	StopSound(between_levels_idx);
+end;
+
+
+procedure PlayBoulderCrashSound();
+var
+begin
+
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(boulder_crash_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		ResetSoundChannel(nex_free_effect);
+		// add the sound
+		effects[nex_free_effect].effect_id := boulder_crash_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 40;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 8;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 16*16 + 10;
+		effects[nex_free_effect].waveform := sid_noise;
+	end;
+	
+end;
+
+
+procedure PlayFireballSound(pfb_actor : byte);
+var
+begin
+
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(fireball_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		ResetSoundChannel(nex_free_effect);
+		// add the sound
+		effects[nex_free_effect].effect_id := fireball_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0;
+		effects[nex_free_effect].volume := 6;
+		effects[nex_free_effect].frequency := 8;
+		effects[nex_free_effect].attack := 0*16+0; 
+		effects[nex_free_effect].sus_release := 15*16 + 15;
+		effects[nex_free_effect].waveform := sid_noise;
+		effects[nex_free_effect].modulation := 0;//repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 0;
+		effects[nex_free_effect].actor_id := pfb_actor;
+	end;
+	
+end;
+
+procedure StopFireballSound(sfb_actor : byte);
+begin
+	StopActorSound(fireball_idx, sfb_actor);
+	//StopSound(fireball_idx);
+end;
+
+procedure StopAllFireballSounds();
+begin
+	StopSound(fireball_idx);
+end;
+
+
+procedure PlayBoulderBounceSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(boulder_bounce_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+	
+		effects[nex_free_effect].effect_id := boulder_bounce_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 5;
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 2;
+		effects[nex_free_effect].attack := 6;
+		effects[nex_free_effect].sus_release := 16*16 + 6;
+		effects[nex_free_effect].waveform := sid_saw;
+	end;
+end;
+
+procedure PlayPickSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(pick_hold_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := pick_hold_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0; // forever until stopped
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 50;
+		effects[nex_free_effect].attack := 255;
+		effects[nex_free_effect].sus_release := 3;//26*16 + 6;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 5;
+	end;
+end;
+
+procedure PlayKeySpinSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(key_spin_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := key_spin_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0; // forever until stopped
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 44;
+		effects[nex_free_effect].attack := 100;
+		effects[nex_free_effect].sus_release := 26*16 + 8;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 8;
+	end;
+end;
+
+procedure StopKeySpinSound();
+begin
+	StopSound(key_spin_idx);
+end;
+
+procedure PlayKeyFlashSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(key_flash_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := key_flash_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0; // forever until stopped
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 80;
+		effects[nex_free_effect].attack := 255;
+		effects[nex_free_effect].sus_release := 2;//26*16 + 6;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 2;
+		
+	end;
+end;
+
+procedure StopKeyFlashSound();
+begin
+	StopSound(key_flash_idx);
+end;
+
+
+
+procedure StopPickSound();
+begin
+	StopSound(pick_hold_idx);
+end;
+
+procedure PlayPickEndSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(pick_end_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := pick_end_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0; // forever until stopped
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 80;
+		effects[nex_free_effect].attack := 255;
+		effects[nex_free_effect].sus_release := 3;//26*16 + 6;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 3;
+	end;
+end;
+
+procedure StopPickEndSound();
+begin
+	StopSound(pick_end_idx);
+end;
+
+procedure SetFirstNote(sfn_id : byte);
+var
+noteIndex : byte;
+begin
+	noteIndex := effects[sfn_id].modulation_notes + 1 + effects[sfn_id].notes_counter;
+	effects[sfn_id].frequency := notes_data[noteIndex];
+	inc(effects[sfn_id].notes_counter);	
+end;
+
+procedure PlayGameStartSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(game_start_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := game_start_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 15;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 9;
+		effects[nex_free_effect].waveform := sid_saw;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 3;
+		effects[nex_free_effect].modulation_notes := start_notes_idx;
+	
+		SetFirstNote(nex_free_effect);
+
+	end;
+
+end;
+
+procedure PlayCollectPickSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(game_start_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := collect_pick_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 15;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 9;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 2;
+		effects[nex_free_effect].modulation_notes := collect_pick_notes_idx;
+		SetFirstNote(nex_free_effect);
+
+	end;
+end;
+
+procedure PlayCollectKeySound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(game_start_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := collect_key_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 15;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 4;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 4;
+		effects[nex_free_effect].modulation_notes := collect_key_notes_idx;
+		SetFirstNote(nex_free_effect);
+	end;
+end;
+
+procedure PlayJumpSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(jump_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := jump_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 15;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 9;
+		effects[nex_free_effect].waveform := sid_saw;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 2;
+		effects[nex_free_effect].modulation_notes := jump_notes_idx;
+		SetFirstNote(nex_free_effect);
+
+	end;
+end;
+
+
+procedure PlayReboundSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(rebound_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := rebound_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 15;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 9;
+		effects[nex_free_effect].waveform := sid_saw;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 2;
+		effects[nex_free_effect].modulation_notes := rebound_notes_idx;
+		SetFirstNote(nex_free_effect);
+
+	end;
+end;
+
+
+procedure PlayDieSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(die_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := die_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 64;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 2;
+		effects[nex_free_effect].waveform := sid_saw;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 2;
+		effects[nex_free_effect].modulation_notes := die_notes_idx;
+		SetFirstNote(nex_free_effect);
+
+	end;
+end;
+
+procedure PlayDeadSound();
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(dead_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := dead_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 64;
+		effects[nex_free_effect].volume := 15;
+		effects[nex_free_effect].frequency := 60;
+		effects[nex_free_effect].attack := 0;
+		effects[nex_free_effect].sus_release := 0*16 + 9;
+		effects[nex_free_effect].waveform := sid_saw;
+		effects[nex_free_effect].modulation := notes_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 20;
+		effects[nex_free_effect].modulation_notes := dead_notes_idx;
+		SetFirstNote(nex_free_effect);
+
+	end;
+end;
+
+
+procedure PlayPickSpinSound();
+var
+begin
+	// find a free channel
+	nex_free_effect := max_effects;
+	FindFreeEffect(pick_spin_idx);
+	if (nex_free_effect < max_effects) then
+	begin
+		// add the sound
+		ResetSoundChannel(nex_free_effect);
+
+		effects[nex_free_effect].effect_id := pick_spin_idx;
+		effects[nex_free_effect].enabled := 1;
+		effects[nex_free_effect].counter := 0;
+		effects[nex_free_effect].ttl := 0; // forever until stopped
+		effects[nex_free_effect].volume := 8;
+		effects[nex_free_effect].frequency := 40;
+		effects[nex_free_effect].attack := 100;
+		effects[nex_free_effect].sus_release := 26*16 + 8;
+		effects[nex_free_effect].waveform := sid_tri;
+		effects[nex_free_effect].modulation := repeat_sound_modulation;
+		effects[nex_free_effect].modulation_delay := 8;
+	end;
+end;
+
+procedure StopPickSpinSound();
+begin
+	StopSound(pick_spin_idx);
+end;

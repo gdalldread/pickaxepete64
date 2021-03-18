@@ -1,0 +1,861 @@
+function Collision( col_idx1, col_idx2 : byte ) :byte;
+var
+	x1, y1, x2, y2, width, height, overlaps : byte;
+begin
+	width := 6;
+	//width := 12;
+	height := 8;
+	//height := 10;
+	overlaps := 0;
+	// all x coords must be halved to fit in a single byte
+	// calculate x1, y1, different calc if a tile
+	if (actors[col_idx1].actor_type = actor_type_tile) then
+	begin
+		//x1 := (actors[col_idx1].x * 4) + 14;
+		//y1 := (actors[col_idx1].yt * 8) + 57;
+		x1 := (actors[col_idx1].x shl 2) + 14;
+		y1 := (actors[col_idx1].yt shl 3) + 56;
+		//width := 8;
+		height := 14;
+	end
+	else
+	begin
+		x1 := (actors[col_idx1].x shr 1) + 4;
+		y1 := actors[col_idx1].y + 13;
+	end;
+	
+
+	// x2, y2
+	if (actors[col_idx2].actor_type = actor_type_tile) then
+	begin
+		//x2 := (actors[col_idx2].x * 4) + 14;
+//		y2 := (actors[col_idx2].yt * 8) + 57;
+		x2 := (actors[col_idx2].x shl 2) + 14;
+		y2 := (actors[col_idx2].yt shl 3) + 56;
+		//width := 8;
+		height := 14;
+	end
+	else
+	begin
+		x2 := (actors[col_idx2].x shr 1) + 4;
+		y2 := actors[col_idx2].y + 13;
+	end;
+
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(x1, 4);	
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(y1, 4);	
+
+
+//moveto(1,24,hi(screen_char_loc));
+//printdecimal(x2, 4);	
+
+//moveto(10,24,hi(screen_char_loc));
+//printdecimal(y2, 4);	
+
+
+	//actors[col_idx1].has_collision := IsOverlappingWH( x1, y1, x2, y2, width, height ); 
+
+	Collision := IsOverlappingWH( x1, y1, x2, y2, width, height ); 
+
+//moveto((col_idx1-1)*10,23,hi(screen_char_loc));
+//printdecimal(actors[col_idx1].has_collision, 4);	
+end;
+
+@startblock $4800 "GAME"
+
+procedure CanFall( pcf_idx : byte );
+var
+	line_idx : byte;
+	hole_x : integer;
+begin
+   	 actors[pcf_idx].can_fall := 0; 
+   	 
+	line_idx := (actors[pcf_idx].y + 2) shr 3;
+	//line_idx := 136 shr 3;
+	line_idx := line_idx - 4;
+
+//moveto(1,line_idx,hi(screen_char_loc));
+//printdecimal(5, 4);	
+
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(line_idx, 4);	
+
+
+	// are we even on a character boundary
+	if (mod(actors[pcf_idx].y+6, 8) <> 0) then 
+	begin
+		actors[pcf_idx].can_fall := 1;
+		return;
+	end;
+	
+
+
+	if (level_lines_lookup[line_idx] = 0) then
+	begin
+		actors[pcf_idx].can_fall := 1;
+		return;
+	end;
+	
+
+	// check if we are a hole
+	hole_x := level_holes_lookup[line_idx];
+	
+	if (line_idx = 21) then
+	begin
+		actors[pcf_idx].can_fall := 0;
+		return;
+	end;
+
+		hole_x := (hole_x shl 3) + 16;
+
+		if ((actors[pcf_idx].x > hole_x) and (actors[pcf_idx].x < hole_x + 22)) then
+		begin
+			actors[pcf_idx].can_fall := 1;
+			return;
+		end;
+
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(hole_x, 4);	
+
+
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(actors[pcf_idx].can_fall, 1);	
+	
+end;
+
+// scoreAddTest
+
+/*procedure ScoreTest();
+begin
+	BcdAdd( #game_score, #scoreAddTest, 5 );	
+	DrawScore();
+end;
+*/
+
+procedure ScoreBoulderHit();
+begin
+	BcdAdd( #game_score, #scoreAddBoulderHit, 5 );	
+	DrawScore();
+end;
+
+procedure ScoreBoulderJump();
+begin
+	if (can_score_on_jump) then
+	begin
+		BcdAdd( #game_score, #scoreAddBoulderJump, 5 );	
+		DrawScore();
+		can_score_on_jump := 0;
+	end;
+end;
+
+procedure ScoreGetPick();
+begin
+	BcdAdd( #game_score, #scoreAddGetPick, 5 );	
+	DrawScore();
+end;
+
+procedure ScoreGetKey();
+begin
+	BcdAdd( #game_score, #scoreAddGetKey, 5 );	
+	DrawScore();
+end;
+
+procedure ScoreNewLevel();
+begin
+	BcdAdd( #game_score, #scoreAddNewLevel, 5 );	
+	DrawScore();
+end;
+
+
+procedure UpdatePete(petei : byte);
+var
+	upHandled : byte = 0;
+	climb_x : byte;
+	climb_y : byte;
+begin
+
+
+
+	if (actors[petei].animation = pete_between_levels_idx) then return;
+
+
+	CanFall(petei);
+	upHandled := 0;
+
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(actors[petei].animation, 4);	
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(actors[petei].can_climb, 4);	
+
+
+	if (actors[petei].animation = pete_idle_idx) then
+	begin
+		actors[petei].portal_hit := 0;
+		if (joystickright) then
+		begin
+			WalkPete(petei, 1, 1);
+			upHandled := 1;
+	
+		end;
+		if (joystickleft) then
+		begin
+			WalkPete(petei, 0, 1);
+			upHandled := 1;
+		end;
+		if (actors[petei].can_fall = 1) then
+		begin
+			FallPete(petei, 1);
+			upHandled := 1;
+		end;
+		if (actors[petei].can_climb and joystickup) then 
+		begin
+			ClimbPete(petei,actor_direction_none,actor_direction_none,1);
+			upHandled := 1;
+		end;
+		if (joystickbutton) then
+		begin
+		  	JumpPete(petei, actor_direction_none, actor_direction_none, 1);
+		  	upHandled := 1;
+		end;
+		if ((joystickbutton) and (joystickdown)) then
+		begin
+		  	DuckPete(petei, actor_direction_none, actor_direction_none, 1);
+		  	upHandled := 1;
+		end;
+
+	end
+	else if ( (actors[petei].animation = pete_walk_idx) or (actors[petei].animation = pete_walkside_idx)) then
+	begin
+		if (joystickright) then
+		begin
+			WalkPete(petei, 1, 0);
+			upHandled := 1;
+		end;
+		if (joystickleft) then
+		begin
+			WalkPete(petei, 0, 0);
+			upHandled := 1;
+		end;
+		if (actors[petei].can_fall = 1) then
+		begin
+			FallPete(petei, 1);
+			upHandled := 1;
+		end;
+		if (actors[petei].can_climb and joystickup) then 
+		begin
+			ClimbPete(petei,actor_direction_none,actor_direction_none,1);
+			upHandled := 1;
+		end;
+		if (joystickbutton) then
+		begin
+		  	JumpPete(petei, actor_direction_unchanged, actor_direction_none, 1);
+			upHandled := 1;
+		end;
+		if ( (joystickbutton) and (joystickdown)) then
+		begin
+		  	DuckPete(petei, actor_direction_unchanged, actor_direction_none, 1);
+			upHandled := 1;
+		end;
+		if (actors[petei].portal_hit = 1) then
+		begin
+			if (actors[petei].flashing = 0) then
+			begin
+				ReboundPete(petei);
+				upHandled := 1;
+			end;
+		end;		
+	end
+	else if (actors[petei].animation = pete_fall_idx) then
+	begin
+		actors[petei].portal_hit := 0;
+
+		if (actors[petei].can_fall = 1) then
+		begin
+			FallPete(petei, 0);
+			upHandled := 1;
+		end;
+		if (actors[petei].can_fall = 0) then
+		begin
+			IdlePete(petei);
+			upHandled := 1;
+		end;
+	end
+	else if ( (actors[petei].animation = pete_climb_idx) or (actors[petei].animation = pete_climbside_idx)) then
+	begin
+		actors[petei].portal_hit := 0;
+	
+		if (actors[petei].can_climb) then
+		begin
+			climb_x := actor_direction_none;
+			climb_y := actor_direction_none;
+			if (joystickright) then climb_x := actor_direction_reverse;
+			if (joystickleft) then climb_x := actor_direction_forward;
+			if ((joystickdown) and (actors[petei].can_fall)) then climb_y := actor_direction_reverse;
+			if (joystickup) then climb_y := actor_direction_forward;
+
+			ClimbPete(petei,climb_x,climb_y,1);
+			upHandled := 1;
+		end
+		else
+		begin
+			IdlePete(petei);
+		end;
+	end
+	else if (actors[petei].animation = pete_jump_idx) then
+	begin
+		upHandled := 1;
+		actors[petei].portal_hit := 0;
+
+		if (actors[petei].current_sprite = GetNumAnimationSteps(actors[petei].animation)-1) then 
+		begin
+			upHandled := 0;
+			if (joystickright) then
+			begin
+				WalkPete(petei, 1, 0);
+				upHandled := 1;
+			end;
+			if (joystickleft) then
+			begin
+				WalkPete(petei, 0, 0);
+				upHandled := 1;
+			end;
+		end
+		else
+		begin
+			if (joystickright) then
+			begin
+		  		JumpPete(petei, actor_direction_reverse, actor_direction_none, 0);
+				upHandled := 1;
+			end;
+			if (joystickleft) then
+			begin
+		  		JumpPete(petei, actor_direction_forward, actor_direction_none, 0);
+				upHandled := 1;
+			end;
+		end;
+		
+		if (actors[petei].can_climb and joystickup) then 
+		begin
+			climb_x := actor_direction_none;
+			climb_y := actor_direction_forward;
+			if (joystickright) then climb_x := actor_direction_reverse;
+			if (joystickleft) then climb_x := actor_direction_forward;
+		
+			ClimbPete(petei, climb_x, climb_y, 1);
+		end;
+	end
+	else if (actors[petei].animation = pete_duck_idx) then
+	begin
+		upHandled := 1;
+		//actors[petei].portal_hit := 0;
+
+		if (actors[petei].current_sprite = GetNumAnimationSteps(actors[petei].animation)-1) then 
+		begin
+			upHandled := 0;
+			if (joystickright) then
+			begin
+				WalkPete(petei, 1, 0);
+				upHandled := 1;
+			end;
+			if (joystickleft) then
+			begin
+				WalkPete(petei, 0, 0);
+				upHandled := 1;
+			end;
+		end
+		else
+		begin
+			if (joystickright) then
+			begin
+		  		DuckPete(petei, actor_direction_reverse, actor_direction_none, 0);
+				upHandled := 1;
+			end;
+			if (joystickleft) then
+			begin
+		  		DuckPete(petei, actor_direction_forward, actor_direction_none, 0);
+				upHandled := 1;
+			end;
+		end;
+		
+		if (actors[petei].portal_hit = 1) then
+		begin
+			if (actors[petei].flashing = 0) then
+			begin
+				ReboundPete(petei);
+				upHandled := 1;
+			end;
+		end;		
+
+
+	end
+	else if (actors[petei].animation = pete_rebound_idx) then
+	begin
+		upHandled := 1;
+		// if ( o.state_counter > 5) then o.portal_hit = 0 idle_pete(o) end
+		if (actors[petei].counter >= actors[petei].ttl) then 
+		begin
+			actors[petei].portal_hit := 0;
+			IdlePete(petei);
+		end;
+	end
+	else if (actors[petei].animation = pete_die_idx) then
+	begin
+		upHandled := 1;
+		if (actors[petei].counter >= actors[petei].ttl) then
+		begin
+			DeadPete(petei);
+		end
+	end
+	else if (actors[petei].animation = pete_dead_idx) then
+	begin
+		upHandled := 1;
+		if (actors[petei].counter >= actors[petei].ttl) then
+		begin
+			NewLifePete(petei);
+		end
+	end;
+
+
+
+	if (upHandled = 0) then 
+	begin
+		IdlePete(petei);
+	end;
+
+	if (actors[petei].flip = 0)	then
+	begin
+		if ((actors[petei].x < 25) and (actors[petei].x_velocity <> 0)) then actors[petei].x_velocity := 0; 
+	end;
+	if (actors[petei].flip = 1)	then
+	begin
+		if ((actors[petei].x > 316) and (actors[petei].x_velocity <> 0)) then actors[petei].x_velocity := 0; 
+	end;
+	
+
+ //if ((o.x + 8 > x2) and (o.x_vel > 0)) o.x_vel = 0 --o.x = x2-8
+
+end;
+
+procedure UpdatePick(upPicki, upiPetei : byte);
+var
+begin
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(actors[upPicki].animation, 4);	
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(actors[upPicki].animation, 4);	
+
+
+	if (actors[upPicki].enabled = 0) then return;
+
+	if ((actors[upPicki].animation <> pick_hold_idx) and (actors[upPicki].animation <> pick_holdflash_idx)) then
+	begin
+		if (Collision(upPicki, upiPetei) = 1) then 
+		begin
+			HoldPick(upPicki,1);
+			ScoreGetPick();
+		end;
+	end;
+
+
+	if (actors[upPicki].animation = pick_spin_idx) then
+	begin
+		if (actors[upPicki].y >= 202) then
+		begin
+			actors[upPicki].y := 202;
+			WaitPick(upPicki);
+		end
+	end
+	else if (actors[upPicki].animation = pick_wait_idx) then
+	begin
+		if (actors[upPicki].counter >= actors[upPicki].ttl) then
+		begin
+			FlashPick(upPicki);
+		end
+	end
+	else if (actors[upPicki].animation = pick_flash_idx) then
+	begin
+		if (actors[upPicki].counter >= actors[upPicki].ttl) then
+		begin
+			StopPick(upPicki);
+		end
+	end
+	else if ((actors[upPicki].animation = pick_hold_idx) or (actors[upPicki].animation = pick_holdflash_idx)) then
+	begin
+		if (actors[upPicki].counter >= actors[upPicki].ttl) then
+		begin
+			if (actors[upPicki].animation = pick_hold_idx) then	
+			begin
+				HoldFlashPick(upPicki);
+			end
+			else
+			begin
+				StopPick(upPicki);
+			end;
+		end
+		else
+		begin
+			actors[upPicki].flip := actors[upiPetei].flip;
+			actors[upPicki].x := actors[upiPetei].x - 14;
+			if ( actors[upiPetei].flip = 1) then actors[upPicki].x := actors[upiPetei].x + 14;
+			actors[upPicki].y := actors[upiPetei].y;
+			if (actors[upPicki].current_sprite = 0) then 
+			begin
+				actors[upPicki].y := actors[upPicki].y - 8;
+				actors[upPicki].x := actors[upPicki].x + 9;
+				if ( actors[upiPetei].flip = 1) then actors[upPicki].x := actors[upPicki].x - 18;
+			end;
+			if (( actors[upiPetei].animation = pete_jump_idx ) or (actors[upiPetei].animation = pete_rebound_idx)) then
+			begin
+				actors[upPicki].y := actors[upPicki].y - 8;
+			end
+			else if ( actors[upiPetei].animation = pete_duck_idx ) then
+			begin
+				actors[upPicki].y := actors[upPicki].y + 8;
+			end;
+			
+		end;
+	end;
+end;
+
+
+procedure UpdateKey(upKeyi, upkePetei : byte);
+var
+begin
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(upKeyi, 4);	
+
+
+
+	if (actors[upKeyi].enabled = 0) then return;
+
+
+	if (Collision(upKeyi, upkePetei) = 1) then 
+	begin
+		HoldKey(upKeyi);
+		KeyPete(upkePetei);
+		ScoreGetKey();
+	end;
+
+
+	if (actors[upKeyi].animation = key_spin_idx) then
+	begin
+		if (actors[upKeyi].y <= 54) then
+		begin
+			WaitKey(upKeyi);
+		end
+	end
+	else if (actors[upKeyi].animation = key_wait_idx) then
+	begin
+		if (actors[upKeyi].counter >= actors[upKeyi].ttl) then
+		begin
+			FlashKey(upKeyi);
+		end
+	end
+	else if (actors[upKeyi].animation = key_flash_idx) then
+	begin
+		if (actors[upKeyi].counter >= actors[upKeyi].ttl) then
+		begin
+			StopKey(upKeyi);
+		end
+	end;
+end;
+
+
+procedure UpdateBoulder(ubBoulderi, ubPetei : byte);
+var
+	otherBoulderi : byte;
+	allBouldersi : byte;
+	pick_key_spawn : byte;
+	collisions : byte;
+begin
+
+	if (actors[ubBoulderi].enabled = 0) then return;
+
+	CanFall(ubBoulderi);
+
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(actors[ubBoulderi].can_fall, 4);	
+
+
+	if (actors[ubBoulderi].animation = boulder_idle_idx) then
+	begin
+	
+		if (actors[ubBoulderi].can_fall = 1) then
+		begin
+			actors[ubBoulderi].animation := boulder_fall_idx;
+			actors[ubBoulderi].y_velocity := boulder_y_speed;
+			actors[ubBoulderi].ttl := 0;
+			actors[ubBoulderi].counter := 0;
+			actors[ubBoulderi].flipy := 1;
+		
+		end;
+	end
+	else if (actors[ubBoulderi].animation = boulder_fall_idx) then
+	begin
+		if (actors[ubBoulderi].can_fall = 0) then
+		begin
+			actors[ubBoulderi].y_velocity := boulder_y_speed;
+			//rand(10,20,actors[ubBoulderi].ttl);		
+			actors[ubBoulderi].ttl := actors[ubBoulderi].counter;
+			if (actors[ubBoulderi].ttl <= 1) then 
+			begin 
+				actors[ubBoulderi].ttl := 0;
+				actors[ubBoulderi].animation := boulder_idle_idx;
+				actors[ubBoulderi].y_velocity := 0;
+
+			end
+			else
+			begin
+				actors[ubBoulderi].ttl := actors[ubBoulderi].ttl - 1;
+				actors[ubBoulderi].animation := boulder_bounce_idx;
+				PlayBoulderBounceSound();
+
+			end;
+			if (actors[ubBoulderi].ttl > 10) then actors[ubBoulderi].ttl := 10;
+			actors[ubBoulderi].counter := 0;
+			actors[ubBoulderi].flipy := 0;
+		end;
+	end
+	else if (actors[ubBoulderi].animation = boulder_bounce_idx) then
+	begin
+		if (actors[ubBoulderi].counter >= actors[ubBoulderi].ttl) then
+		begin
+			actors[ubBoulderi].animation := boulder_idle_idx;
+		end
+	end
+	else if (actors[ubBoulderi].animation = boulder_explode_idx)  then
+	begin
+		if (actors[ubBoulderi].counter >= actors[ubBoulderi].ttl) then
+		begin
+			//if (actors[key_index].enabled = 0) then StartKey(key_index, actors[ubBoulderi].x, actors[ubBoulderi].y);
+			StopBoulder(ubBoulderi);
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(key_index, 4);	
+		
+			//StartPick(pick_index, actors[ubBoulderi].x, actors[ubBoulderi].y);
+		end
+	end
+	else if (actors[ubBoulderi].animation = boulder_explodepick_idx)  then
+	begin
+		if (actors[ubBoulderi].counter >= actors[ubBoulderi].ttl) then
+		begin
+			//rand(0,255,pick_key_spawn);
+			pick_key_spawn := Random(); 
+			if ( (actors[pick_index].enabled = 0) and (pick_key_spawn > start_pick_threshold)) then StartPick(pick_index, actors[ubBoulderi].x, actors[ubBoulderi].y);
+			if ((actors[key_index].enabled = 0) and (pick_key_spawn < start_key_threshold)) then StartKey(key_index, actors[ubBoulderi].x, actors[ubBoulderi].y);
+			StopBoulder(ubBoulderi);
+//moveto(10,23,hi(screen_char_loc));
+//printdecimal(pick_index, 4);	
+
+		end
+	end
+	else if (actors[ubBoulderi].animation = boulder_fireball_idx) then
+	begin
+		if (actors[ubBoulderi].y >= 202) then
+		begin
+			//actors[ubBoulderi].y := 201;
+			ExplodeBoulder(ubBoulderi, 1);
+		end
+	end;
+
+
+
+	if ( (actors[ubBoulderi].animation <> boulder_fireball_idx) and (actors[ubBoulderi].animation <> boulder_explode_idx)) then
+	//if ((actors[ubBoulderi].enabled = 1)) then
+	begin
+		// check for collision with any other boulder
+		for allBouldersi := 0 to max_boulders do
+		begin
+			otherBoulderi := boulder_indexes[allBouldersi];
+			if ( (actors[otherBoulderi].enabled = 1) and (actors[otherBoulderi].animation <> boulder_fireball_idx)) then
+			begin
+				if (actors[otherBoulderi].animation <> boulder_explode_idx) then
+				begin
+					if ( (Collision(ubBoulderi, otherBoulderi) = 1) and (ubBoulderi <> otherBoulderi)) then 
+					begin
+						// destroy otherBoulderi
+						ExplodeBoulder(otherBoulderi, 1);
+
+						// convert ubBoulderi into fireball
+						FireballBoulder(ubBoulderi);
+						//actors[ubBoulderi].color := red;
+					end;
+				end;
+			end;
+		end;
+		
+	end;
+
+	if ((actors[ubBoulderi].animation <> boulder_explode_idx) and (actors[ubBoulderi].animation <> boulder_explodepick_idx)) then
+	begin
+		if((actors[pick_index].animation = pick_hold_idx) or (actors[pick_index].animation = pick_holdflash_idx)) then
+		begin
+			if (Collision(ubBoulderi, pick_index) = 1) then 
+			begin
+				ExplodeBoulder(ubBoulderi, 0);
+				ScoreBoulderHit();
+			end;
+		end;
+	end;
+	// did we hit pete?
+	
+	if ((actors[ubBoulderi].animation <> boulder_explode_idx) and (actors[ubBoulderi].animation <> boulder_explodepick_idx)) then
+	begin
+		if (Collision(ubBoulderi, ubPetei) = 1) then 
+		begin
+			if ( (actors[ubPetei].animation <> pete_jump_idx) and (actors[ubPetei].animation <> pete_rebound_idx)) then 
+			begin
+				DiePete(ubPetei);
+			end
+			else
+			begin
+				ScoreBoulderJump();
+			end;
+		end;
+	end;
+
+
+	//sprite_indexes[index]
+/*	collisions := sprite_collision;
+	if (sprite_indexes_valid = 1) then
+	begin
+		if(getbit(collisions, sprite_indexes[ubBoulderi])) then
+		begin
+			if(getbit(collisions, sprite_indexes[ubPetei])) then DiePete(ubPetei);
+		end;
+	end;
+*/
+
+
+//moveto(10,23,hi(screen_char_loc2));
+//printdecimal(pick_index, 4);	
+
+
+	if (Collision(ubBoulderi, bottom_portal) = 1) then StopBoulder(ubBoulderi);
+
+
+	if (actors[ubBoulderi].flip = 0) then
+	begin
+		if (actors[ubBoulderi].x < 22) then actors[ubBoulderi].flip := 1; 
+	end;
+	if (actors[ubBoulderi].flip = 1) then
+	begin
+		if (actors[ubBoulderi].x > 320) then actors[ubBoulderi].flip := 0; 
+	end;
+
+end;
+
+
+
+procedure UpdateLadder(ulLadderi, ulPetei : byte);
+var
+	col_detected : byte;
+begin
+
+//moveto(15,23,hi(screen_char_loc));
+//printdecimal(actors[ulLadderi].current_sprite, 3);	
+	col_detected := 0;
+
+	if (actors[ulLadderi].animation = ladder_roll_idx) then
+	begin
+	
+		if (actors[ulLadderi].current_sprite = GetNumAnimationSteps(actors[ulLadderi].animation)-1) then 
+		begin
+			PositionLadder(ulLadderi);
+			actors[ulLadderi].current_sprite := 0;
+		end;
+	
+		if (Collision(ulLadderi, ulPetei) = 1) then
+		begin
+			col_detected := 1;
+			StopLadder(ulLadderi);
+			actors[ulPetei].can_climb := ulLadderi;
+		end;
+	end;
+	
+	if (actors[ulLadderi].animation = ladder_stop_idx) then
+	begin
+		if (Collision(ulLadderi, ulPetei) = 0 ) then
+		//if (actors[ulLadderi].has_collision = 0) then
+		begin
+			RollLadder(ulLadderi, 8);
+			actors[ulPetei].can_climb := 0;
+		end;
+	end;
+
+//moveto((ulLadderi-1)*10,24,hi(screen_char_loc));
+//printdecimal(col_detected, 4);	
+
+
+end;
+
+
+procedure UpdatePortal(upi, upPetei : byte);
+var
+	up_col_detected : byte;
+	up_rnd : byte;
+begin
+
+//moveto(15,23,hi(screen_char_loc));
+//printdecimal(actors[ulLadderi].current_sprite, 3);	
+	up_col_detected := 0;
+
+	if(Collision(upi, upPetei) = 1) then
+	begin
+		actors[upPetei].portal_hit := 1;
+		if (actors[upPetei].flashing = 0) then
+		begin
+			new_level_required := 1;
+			level_colour := actors[upi].color;
+			ScoreNewLevel();
+		end;
+	end;
+
+	if (actors[upi].animation = portal_stop_idx) then
+	begin
+		if (actors[upi].counter >= actors[upi].ttl) then SpinPortal(upi);
+	end;
+	
+	if (actors[upi].animation = portal_spin_idx) then
+	begin
+		if (actors[upi].counter >= 255) then StopPortal(upi);
+		
+	//rand(1, 255, up_rnd);
+	up_rnd := Random();
+	if((actors[pete_index].animation <> pete_die_idx) and (actors[pete_index].animation <> pete_dead_idx)) then
+	begin
+		if (up_rnd < boulder_release_frequency) then
+		begin
+			StartFreeBoulderFromTileCoords(actors[upi].x + 3 , actors[upi].yt, 1);
+		end;
+		if (up_rnd > (255 - boulder_release_frequency) ) then
+		begin
+			StartFreeBoulderFromTileCoords(actors[upi].x - 1 , actors[upi].yt, 0);
+		end;
+	end;
+/*
+StartBoulder(sb_idx : byte, sb_x : integer, sb_y : byte);
+
+	  local i = flr(rnd(300))
+	   if (i == 66) then
+		 create_boulder(60+7,o.y,true)
+	   end
+	   if (i == 123) then
+		 create_boulder(60-7,o.y,false)
+	   end
+*/
+
+	end;
+
+//moveto((ulLadderi-1)*10,24,hi(screen_char_loc));
+//printdecimal(col_detected, 4);	
+
+
+end;
+@endblock

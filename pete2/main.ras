@@ -1,0 +1,614 @@
+program PickaxePete;
+
+@use "compression/compression"
+@include "source/level.ras"
+@include "source/sounds.ras"
+@include "source/actors.ras"
+@include "source/game.ras"
+
+var
+
+temp : pointer;
+val : byte;
+
+// Automatically export charset
+@export "charsets/charset.flf" "charsets/charset.bin" 256
+
+// Export all sprites automatically on each build
+@export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
+
+//@export "images/pete.flf" "images/pete.bin" 256
+
+
+ 	@define spriteLoc $b000
+	sprites:incbin("sprites/sprites.bin", @spriteLoc); 
+
+	// Location of charset
+	const charsetLoc: address = $8800;
+	image_data2 : incbin("charsets/charset.bin", charsetLoc);
+
+@startblock $4800 "Data"
+	image1_color: IncBin("images/pete_color.bin")compressed;
+@endblock
+@startblock $9000 "Data"
+	image1_data: IncBin("images/pete_data.bin") compressed;
+@endblock
+	
+	// Address of screen bitmap data
+	const dataAddress : address = $6000;
+	const colorAddress : address = $7000;
+
+
+	i, time: byte = 0;
+	index: byte;
+	const useKernal : byte = 1;
+	
+	frame : byte = 0;
+	count : byte = 0;
+
+   	const joystickPort: byte = 2;
+   	const useBank:byte = 2;
+  	
+
+
+procedure SetupImage(data, color : pointer);
+begin
+	// Clear the screen & color ram first
+	clearbitmap(^$6000,32);	
+	clearscreen(black,^$D800);
+	clearscreen(black,^$4400);
+	// Decompress the color data
+	Compression::Decompress(color, #colorAddress); 
+	// Copy color data to color ram at $4400 and $D800
+	copyimagecolordata(#colorAddress,1);
+	// Decompress image data directly to the address
+	Compression::Decompress(data, #dataAddress); 
+end;
+
+
+procedure InitStartScreen();
+begin
+	definescreen();
+	SetBank(VIC_BANK0);
+
+	screen_bg_col:=black;
+	screen_fg_col:=black;
+
+	settextmode();
+	SetRegularColorMode();
+	setcharsetlocation($1000);
+
+	clearscreen(key_space, screen_char_loc);
+	clearscreen(blue, screen_col_loc);
+
+	setcharsetlocation($1000);
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, red);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+
+	moveto(13,7,hi(screen_char_loc));
+	printstring("PICKAXE PETE",0,40);
+	
+	moveto(18,9,hi(screen_char_loc));
+	printstring("BY",0,40);
+	moveto(12,11,hi(screen_char_loc));
+	printstring("GARETH ALLDREAD",0,40);
+
+	moveto(10,17,hi(screen_char_loc));
+	printstring("PRESS FIRE TO START",0,40);
+end;   
+
+procedure InitGameOverScreen();
+begin
+	definescreen();
+	SetBank(VIC_BANK0);
+
+	screen_bg_col:=black;
+	screen_fg_col:=black;
+
+	settextmode();
+	SetRegularColorMode();
+	setcharsetlocation($1000);
+
+	clearscreen(key_space, screen_char_loc);
+	clearscreen(blue, screen_col_loc);
+
+	setcharsetlocation($1000);
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, red);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+
+	moveto(15,7,hi(screen_char_loc));
+	printstring("GAME OVER",0,40);
+	if (BcdCompare( #game_score, #hi_score, 5 )) then
+	begin
+		moveto(12,9,hi(screen_char_loc));
+		printstring("NEW HIGH SCORE!",0,40);
+		moveto(14,11,hi(screen_char_loc));
+		BcdPrint(#game_score, 5 );
+		SetHighScore();
+	end;
+end;   
+
+
+procedure InitSplashScreen();
+begin
+	setbank(vic_bank1);
+	setmulticolormode();
+	setbitmapmode();
+	//disableciainterrupts();
+	screen_fg_col:=black;
+	screen_bg_col:=black;
+	// Set data pointer to $6000
+	vic_data_loc:=$18;
+	SetupImage(#image1_data, #image1_color);		
+end;   
+
+
+// This method initializes the game screen
+procedure InitGameScreen();
+begin
+	definescreen();
+	SetBank(VIC_BANK2);
+
+	screen_bg_col:=black;
+	screen_fg_col:=black;
+	clearscreen(key_space, screen_char_loc3);
+	
+	settextmode();
+	setmulticolormode();
+
+	setcharsetlocation(charsetLoc);
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, level_colour);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+end;   
+
+// This method initializes the sprites
+procedure InitSprites();
+var  
+begin
+	SetupActors();
+
+	// Set all sprites to be multicolor
+	sprite_multicolor:=$ff;
+	// Set common sprite multicolor #1 
+	sprite_multicolor_reg1:=light_red;
+	// Set  common sprite multicolor #2 
+	sprite_multicolor_reg2:=white;
+	// Set sprite "0" individual color value 
+	
+	sprite_stretch_x:=$0;
+	sprite_stretch_y:=$0;
+end;
+
+procedure InitBetweenLevelSprites();
+var  
+begin
+	SetupBetweenLevelActors();
+
+	// Set all sprites to be multicolor
+	sprite_multicolor:=$ff;
+	// Set common sprite multicolor #1 
+	sprite_multicolor_reg1:=light_red;
+	// Set  common sprite multicolor #2 
+	sprite_multicolor_reg2:=white;
+	// Set sprite "0" individual color value 
+
+	sprite_stretch_x:=$FF;
+	sprite_stretch_y:=$FF;
+end;
+
+// update the game play logic
+procedure UpdateGameLogic();
+var
+	pete_actor_index : byte;
+	sprite_anim_speed : byte;
+	x_move_speed : byte;
+	x_skip : integer;
+	y_move_speed : byte;
+	y_skip : byte;
+	skip : byte;
+
+begin
+pete_actor_index := 0;
+
+
+for index := 0 to num_actors do	
+	begin		
+
+			// update the state of each actor type	
+			if (actors[index].actor_index = actor_pete) then
+			begin
+				UpdatePete(index);
+				pete_actor_index := index;
+			end
+			else if (actors[index].actor_index = actor_boulder) then
+			begin
+				UpdateBoulder(index, pete_actor_index);
+			end
+			else if (actors[index].actor_index = actor_ladder) then
+			begin
+				UpdateLadder(index, pete_actor_index);
+			end
+			else if (actors[index].actor_index = actor_portal) then
+			begin
+				UpdatePortal(index, pete_actor_index);
+			end
+			else if (actors[index].actor_index = actor_pick) then
+			begin
+				UpdatePick(index, pete_actor_index);
+			end
+			else if (actors[index].actor_index = actor_key) then
+			begin
+				UpdateKey(index, pete_actor_index);
+			end;
+
+			inc (actors[index].counter);
+
+			// update the animation frame for the current actor
+			if ( actors[index].animation_counter = 0 ) then
+			begin
+				actors[index].animation_counter := (18 - actors[index].animation_speed);
+				if (actors[index].animation_speed > 0 ) then
+				begin
+					inc(actors[index].current_sprite);
+					if (actors[index].current_sprite >= GetNumAnimationSteps(actors[index].animation)) then actors[index].current_sprite := 0;
+				end;
+			end;
+			dec(actors[index].animation_counter);
+
+			// update the x location of the current actor
+			x_skip := actors[index].x_skip shl 1;
+			if (actors[index].x_move_counter = 0)  then
+			begin
+				actors[index].x_move_counter := 8 - actors[index].x_velocity;
+				if (actors[index].x_velocity > 0 ) then
+				begin
+					if (actors[index].flip) then actors[index].x := actors[index].x + x_skip;
+					if (actors[index].flip = 0) then actors[index].x := actors[index].x - x_skip;	
+				end;
+			end;
+			dec(actors[index].x_move_counter);
+
+			// update the y location of the current actor
+			y_skip := actors[index].y_skip shl 1;
+			if (actors[index].y_move_counter = 0)  then
+			begin
+				actors[index].y_move_counter := 8 -  (actors[index].y_velocity);
+			
+				if (actors[index].y_velocity > 0 ) then
+				begin
+					if (actors[index].flipy) then actors[index].y := actors[index].y + y_skip;
+					if (actors[index].flipy = 0) then actors[index].y := actors[index].y - y_skip;	
+				end;
+			end;
+			
+			dec(actors[index].y_move_counter);
+	end;
+end;
+
+
+// update the sprites and animated tiles
+procedure UpdateSprites(segment : byte);
+var  
+	sprite_data_index : byte;	
+	animation_index : byte;
+	animation : pointer;
+	sprite_number : byte;
+	start_char_loc : integer;
+	pete_can_fall : byte;
+	num_ladders : byte;
+begin
+
+sprite_number := 0;
+num_ladders := 0;
+
+
+
+for index := 0 to num_actors do	
+	begin		
+
+			//////////////////////////////////////
+
+			// update sprites
+			if (actors[index].actor_type = actor_type_sprite)then
+			begin
+
+				sprite_indexes[index] := sprite_number;
+			
+				if (( actors[index].counter & 1 = 1) and (actors[index].flashing = 1)) then
+				begin
+					sprite_color[sprite_number] := black;
+				end
+				else
+				begin
+					// do this for every sprite
+					sprite_color[sprite_number] := actors[index].color;
+				end;
+				// Turn on sprite 
+				togglebit(sprite_bitmask,sprite_number,1);
+
+				// Update the sprite position on screen for sprite number @useSprite	
+				SpritePos(actors[index].x, actors[index].y, sprite_number);
+
+				// calculate the sprite data to use based on current anim and flip
+				sprite_data_index := GetSpriteIndex(actors[index].animation, actors[index].current_sprite);
+
+				if (actors[index].has_flipped_sprite = 1) then sprite_data_index := sprite_data_index + actors[index].flip;
+
+				// Set the sprite pointer to point to the sprite data + direction offset
+				SetSpriteLoc(sprite_number, @spriteLoc/64 + sprite_data_index, useBank);
+				inc(sprite_number);
+
+			end;
+
+			// update animated tile actors
+			if (actors[index].actor_type = actor_type_tile)then
+			begin
+
+				screenmemory := #screen_char_loc3;
+				screencolor := #screen_col_loc;
+
+				start_char_loc := 40 * actors[index].yt + actors[index].x;// + 10;
+
+				// calculate the sprite data to use based on current anim and flip
+				sprite_data_index := GetSpriteIndex(actors[index].animation, actors[index].current_sprite) + actors[index].flip;
+
+				if (actors[index].enabled = 1) then
+				begin
+					screenmemory := screenmemory + start_char_loc;
+					screenmemory[0] := sprite_data_index;					
+					screenmemory[1] := sprite_data_index+1;
+					screenmemory[40] := sprite_data_index+40;				
+					screenmemory[41] := sprite_data_index+41;				
+
+					screencolor := screencolor + start_char_loc;
+					screencolor[0] :=actors[index].color + 8;
+					screencolor[1] :=actors[index].color + 8;
+					screencolor[40] :=actors[index].color + 8;
+					screencolor[41] :=actors[index].color + 8;
+				end;
+			end;
+
+
+
+
+	end;
+
+	sprite_indexes_valid := 1;
+end;
+
+interrupt GameTopHalf();
+
+// only used for debugging
+interrupt GameBottomHalf();
+begin
+
+	startirq(1);
+	SetBank(VIC_BANK0);
+
+	screen_bg_col:=green;
+	setcharsetlocation($1000); 
+	//setregularcolormode();
+
+	RasterIRQ(GameTopHalf(),$00,useKernal);
+	closeirq();
+end;
+
+
+// update the start screen
+interrupt StartRaster();
+var
+	start_game : byte = 0;
+begin
+
+	startirq(1);
+	
+	// Update joystick here
+	Joystick(joystickPort);
+	inc(time);
+
+	if (joystickbutton) then
+	begin
+		start_game := 1;
+		time := 0;
+		PlayGameStartSound();
+
+	end;
+
+	if (time&1 = 1) then UpdateAllSounds();
+
+	if ((start_game) and (time > 20)) then
+	begin
+		ResetAllSoundChannels();
+
+		// start a new game
+		game_over := 0;
+		ZeroScore();
+		ResetPeteLives();
+		level_colour := red;
+		InitGameScreen();
+		CreateLevel();
+		InitSprites();
+		DrawLevel();
+
+		RasterIRQ(GameTopHalf(),$00,useKernal);
+	end;
+
+	closeirq();
+end;
+
+// update the gameover screen
+interrupt GameOverRaster();
+begin
+
+	startirq(1);
+
+	// go to the start screen after a delay
+	if (time > 200) then
+	begin
+		InitStartScreen();
+		start_game := 0;
+		time := 0;
+		RasterIRQ(StartRaster(),$00,useKernal);
+	end;
+	
+	inc(time);
+	
+	closeirq();
+end;
+
+// update the in between levels animation screen
+interrupt NewLevelRaster();
+begin
+
+
+	startirq(1);
+
+	// re-use game logic to animate pete
+	if (time&1 = 1) then
+	begin
+		UpdateAllSounds();
+		UpdateGameLogic();
+	end
+	else
+	begin
+		UpdateSprites(0);	
+	end;	
+
+	// use colour rotation for the screen animation
+	if(count = 0) then 
+	begin
+		count := 5;
+		if (frame = 0) then
+		begin
+			poke(MULTICOLOR_CHAR_COL, 2, level_colour);
+			poke(MULTICOLOR_CHAR_COL, 1, level_colour);
+		end;
+		if (frame = 1) then
+		begin
+			poke(MULTICOLOR_CHAR_COL, 1, black);
+			poke(MULTICOLOR_CHAR_COL, 2, level_colour);
+			
+		end;
+		if (frame = 2) then
+		begin
+			poke(MULTICOLOR_CHAR_COL, 2, black);
+			poke(MULTICOLOR_CHAR_COL, 1, black);
+			
+		end;
+
+		inc(frame);
+		if (frame > 2) then frame := 0;
+	
+	end;
+	
+	// move to the next level after a delay
+	if (time > 128) then
+	begin
+		DisableAllActors();
+		UpdateSprites(0);	
+		ResetAllSoundChannels();
+		UpdateAllSounds();
+
+		InitGameScreen();
+		CreateLevel();
+		InitSprites();
+		DrawLevel();
+		RasterIRQ(GameTopHalf(),$00,useKernal);
+	end;
+	
+	inc(time);
+	dec(count);
+
+	closeirq();
+end;
+
+// main game screen update
+interrupt GameTopHalf();
+begin
+
+
+	startirq(1);
+
+	// every other frame update game logic	
+	if (time&1 = 1) then
+	begin
+		UpdateAllSounds();
+		Joystick(joystickPort);
+		UpdateGameLogic();
+	end
+	else
+	// every other frame update the sprites
+	begin
+		UpdateSprites(0);	
+	end;
+	inc(time);
+
+	// pete has entered a new level
+	if (new_level_required = 1) then
+	begin
+		InitGameScreen();
+		DisableAllActors();
+		UpdateSprites(0);	
+		ResetAllSoundChannels();
+		UpdateAllSounds();
+
+		// get the colour ready for the colour cycling animation		
+		poke(MULTICOLOR_CHAR_COL, 0, black);
+		poke(MULTICOLOR_CHAR_COL, 2, level_colour);
+		poke(MULTICOLOR_CHAR_COL, 1, level_colour);
+
+		// setup pete and the animated lift shaft
+		DrawBetweenLevelScreen();
+		InitBetweenLevelSprites();
+
+		time := 0;
+		count := 5;
+		frame := 0;
+		inc(score_level);		
+
+		PlayBetweenLevelsSound();
+		RasterIRQ(NewLevelRaster(),$00,useKernal);
+	end;
+
+	// game is over
+	if (game_over = 1) then
+	begin
+		DisableAllActors();
+		UpdateSprites(0);	
+		InitGameOverScreen();
+		ResetAllSoundChannels();
+		UpdateAllSounds();
+
+		time := 0;
+		count := 5;
+		frame := 0;
+		RasterIRQ(GameOverRaster(),$00,useKernal);
+	end;
+	closeirq();
+end;
+
+
+
+// Main program
+begin
+	setmemoryconfig(1,1,0);
+
+	/*InitSplashScreen();
+
+	val := 0;	
+	while val=0 do begin
+		Joystick(joystickPort);
+		if (joystickbutton) then val := 1;
+		waitforraster(250);
+	end;*/
+
+	for i:=0 to 100 do waitforraster(0);
+
+
+	InitStartScreen();
+	StartRasterChain(StartRaster(),0,useKernal);		
+	Loop();
+end.

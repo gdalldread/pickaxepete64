@@ -1,0 +1,1641 @@
+var  
+	//////////////////
+	const pete_walk_speed : byte = 7;
+	const pete_fall_speed : byte = 7;
+	const boulder_y_speed : byte = 6;
+	const pick_y_speed : byte = 6;
+	const key_y_speed : byte = 7;
+	const pick_animation_speed : byte = 13;	
+
+	//////////////////
+	const actor_pete : byte = 0;
+	const pete_walk_idx : byte = 0;
+	pete_walk : array[5] of byte = (4,1,3,5,7);
+
+	const pete_idle_idx : byte = 1;
+	pete_idle : array[2] of byte = (1,0);
+
+	const pete_fall_idx : byte = 2;
+	pete_fall : array[5] of byte = (4,9,10,11,10);
+
+	const pete_climb_idx : byte = 3;
+	pete_climb : array[5] of byte = (2,10,12);
+
+	const pete_jump_idx : byte = 4;
+	pete_jump : array[7] of byte = (6,13,15,17,17,15,13);
+
+	const pete_climbside_idx : byte = 5;
+	pete_climbside : array[2] of byte = (1,19);
+
+	const pete_walkside_idx : byte = 6;
+	pete_walkside : array[2] of byte = (1,19);
+
+	const pete_rebound_idx : byte = 7;
+	pete_rebound : array[7] of byte = (6,13,15,17,17,15,13);
+
+	const pete_between_levels_idx : byte = 8;
+
+	const pete_die_idx : byte = 9;
+	pete_die : array[5] of byte = (4,21,22,23,24);
+
+	const pete_dead_idx : byte = 10;
+	pete_dead : array[2] of byte = (1,25);
+
+	const pete_duck_idx : byte = 11;
+	pete_duck : array[7] of byte = (6,43,43,45,45,45,43);
+	
+
+	/////////////////////////////////////////
+
+	const actor_ladder : byte = 1;
+	const ladder_roll_idx : byte = 12;
+	ladder_roll : array[20] of byte = (17,6,6,4,2,0,0,0,0,0,0,0,0,0,0,2,6,6);
+
+	const ladder_stop_idx : byte = 13;
+	ladder_stop : array[2] of byte = (1,0);
+
+	//////////////////////////////////////////
+
+	const actor_portal : byte = 2;
+	const portal_stop_idx : byte = 20;
+	portal_stop : array[2] of byte = (1,19);
+
+	const portal_spin_idx : byte = 21;
+	portal_spin : array[4] of byte = (3,19,19,21);
+
+	//////////////////////////////////////////
+
+	const actor_boulder : byte = 3;
+	const boulder_idle_idx : byte = 30;
+	const boulder_fall_idx : byte = 31;
+	const boulder_bounce_idx : byte = 32;
+	const boulder_fireball_idx : byte = 33;
+	boulder_normal : array[9] of byte = (8,26,26,27,26,26,26,28,26);
+
+	const boulder_explode_idx : byte = 34;
+	const boulder_explodepick_idx : byte = 35;
+	boulder_explode : array[4] of byte = (3,29,30,31);
+
+	const boulder_fireball_idx : byte = 36;
+	boulder_fireball : array[7] of byte = (6,33,33,33,33,33,32);
+
+	const max_boulders : byte = 5;
+	boulder_indexes : array[max_boulders] of byte;
+	num_boulders : byte = 0;
+
+	//////////////////////////////////////////
+
+	const actor_pick : byte = 4;
+	const pick_idle_idx : byte = 40;
+	pick_idle : array[2] of byte = (1,38);
+
+	const pick_spin_idx : byte = 41;
+	pick_spin : array[5] of byte = (4,34,37,38,36);
+
+	const pick_wait_idx : byte = 42;
+	const pick_flash_idx : byte = 43;
+	
+	const pick_hold_idx : byte = 44;
+	const pick_holdflash_idx : byte = 45;
+	pick_hold : array[3] of byte = (2,34,36);
+
+	//////////////////////////////////////////
+
+	const actor_key : byte = 5;
+	const key_idle_idx : byte = 50;
+	key_idle : array[2] of byte = (1,40);
+
+	const key_spin_idx : byte = 51;
+	key_spin : array[5] of byte = (4,40,41,42,39);
+
+	const key_wait_idx : byte = 52;
+	const key_flash_idx : byte = 53;
+	const key_hold_idx : byte = 54;
+	const key_holdflash_idx : byte = 55;
+
+	///////////////////////////////////////////
+
+	const actor_type_sprite : byte = 0;
+	const actor_type_tile : byte = 1;
+
+	const actor_direction_none : byte = 0;
+	const actor_direction_forward : byte = 1;
+	const actor_direction_reverse : byte = 2;
+	const actor_direction_unchanged : byte = 3;
+
+	temp_anim : pointer;
+
+	// Monsterbtw: since the difference between hybrid/ multicolor/hires doesn't seem to be that big in terms of code, perhaps we should instead have a drop down list that lets you select multicolor type : record	
+	actor_type = record
+		enabled : byte = 1;
+		actor_index : byte;
+		actor_type : byte;
+		x : integer = 0;
+		//xt : byte;
+		y : byte = 0; // Current position of monster 
+		yt : integer = 0;
+		color : byte = 0; // Current colour of monster
+		animation : byte = 0;
+		flip : byte = 0;
+		flipy : byte = 0;
+		current_sprite : byte;
+		x_velocity : integer = 0;
+		y_velocity : byte = 0;
+		x_skip : integer = 1;
+		y_skip : byte = 1;
+		can_fall : byte = 0;
+		can_climb : byte = 0;
+		portal_hit : byte = 0;
+		animation_speed : byte = 0; // between 0 and 20
+		has_flipped_sprite : byte = 0;
+
+		//has_collision : byte = 0;
+		counter : byte = 0;
+		ttl : byte = 0;
+		animation_counter : byte = 0;
+		x_move_counter : byte = 0;
+		y_move_counter : byte = 0;
+		flashing : byte = 0;
+	end;
+
+	// Number of walkers
+	const max_actors : byte = 32;
+	// Monster array allocation will fail if it is an array. 
+	actors : array[max_actors] of actor_type;
+	num_actors : byte = 0;
+
+	sprite_indexes : array[max_actors] of byte;
+	sprite_indexes_valid : byte = 0;
+	
+	bottom_portal : byte = 0;
+	pick_index : byte = 0;
+	key_index : byte = 0;
+	pete_index : byte = 0;
+
+	can_score_on_jump : byte = 1;
+
+	const pete_start_x : integer = 160;
+	const pete_start_y : byte  = 152;
+
+
+procedure SetActorDefaults(sad_index : byte, sad_enabled : byte);
+begin
+		actors[sad_index].enabled := 1;
+		actors[sad_index].x := 0;
+		actors[sad_index].y := 0; // Current position of monster 
+		actors[sad_index].yt := 0;
+		actors[sad_index].flip := 0;
+		actors[sad_index].flipy := 0;
+		actors[sad_index].x_velocity := 0;
+		actors[sad_index].y_velocity := 0;
+		actors[sad_index].x_skip := 1;
+		actors[sad_index].y_skip := 1;
+		actors[sad_index].can_fall := 0;
+		actors[sad_index].can_climb := 0;
+		actors[sad_index].portal_hit := 0;
+		actors[sad_index].animation_speed := 0; // between 0 and 20
+		actors[sad_index].has_flipped_sprite := 0;
+
+		//has_collision : byte = 0;
+		actors[sad_index].counter := 0;
+		actors[sad_index].ttl := 0;
+		actors[sad_index].animation_counter := 0;
+		actors[sad_index].x_move_counter := 0;
+		actors[sad_index].y_move_counter := 0;
+		actors[sad_index].flashing := 0;
+		
+		if (sad_enabled = 0) then
+		begin
+			actors[sad_index].enabled := 0;
+		end;
+end;
+
+procedure StopPick(stpi_idx : byte);
+begin
+	actors[stpi_idx].x_velocity := 0;
+	actors[stpi_idx].y_velocity := 0;
+	actors[stpi_idx].animation := pick_idle_idx;
+	actors[stpi_idx].current_sprite := 0;
+	actors[stpi_idx].animation_speed := 0;
+	actors[stpi_idx].ttl := 0;
+	actors[stpi_idx].counter := 0;
+	actors[stpi_idx].enabled := 0;
+	actors[stpi_idx].flip := 0;
+	actors[stpi_idx].x := 0;
+	actors[stpi_idx].y := 0;
+	StopPickEndSound();
+end;
+
+procedure StopKey(stke_idx : byte);
+begin
+	actors[stke_idx].x_velocity := 0;
+	actors[stke_idx].y_velocity := 0;
+	actors[stke_idx].animation := pick_idle_idx;
+	actors[stke_idx].current_sprite := 0;
+	actors[stke_idx].animation_speed := 0;
+	actors[stke_idx].ttl := 0;
+	actors[stke_idx].counter := 0;
+	actors[stke_idx].enabled := 0;
+	actors[stke_idx].flip := 0;
+	actors[stke_idx].x := 0;
+	actors[stke_idx].y := 0;
+	StopKeySpinSound();
+	StopKeyFlashSound();
+end;
+
+procedure StopBoulder(stb_idx : byte);
+begin
+	actors[stb_idx].x_velocity := 0;
+	actors[stb_idx].y_velocity := 0;
+	actors[stb_idx].animation := boulder_idle_idx;
+	actors[stb_idx].current_sprite := 0;
+	actors[stb_idx].animation_speed := 0;
+	actors[stb_idx].ttl := 0;
+	actors[stb_idx].counter := 0;
+	actors[stb_idx].enabled := 0;
+	actors[stb_idx].flip := 0;
+	actors[stb_idx].x := 0;
+	actors[stb_idx].y := 0;
+	
+	StopFireballSound(stb_idx);
+end;
+
+procedure StopAllBoulders();
+var sab_index : byte;
+begin
+	for sab_index := 0 to max_boulders do
+	begin
+		StopBoulder(boulder_indexes[sab_index]);
+	end
+end;
+
+
+	
+procedure ResetSpriteMoveAndAnimation(rsm_index : byte);
+begin
+	actors[rsm_index].animation_counter := 0;
+	actors[rsm_index].x_move_counter := 0;
+	actors[rsm_index].y_move_counter := 0;
+end;
+
+
+procedure IdlePete(ip_idx : byte);
+begin
+	actors[ip_idx].x_velocity := 0;
+	actors[ip_idx].y_velocity := 0;
+	actors[ip_idx].animation := pete_idle_idx;
+	actors[ip_idx].current_sprite := 0;
+	//actors[ip_idx].flip := 0;
+	actors[ip_idx].has_flipped_sprite := 0;
+	//actors[ip_idx].counter := 0;
+	actors[ip_idx].ttl := 0;
+	actors[ip_idx].animation_counter := 0;
+	actors[ip_idx].x_move_counter := 0;
+	actors[ip_idx].y_move_counter := 0;
+end;   
+
+procedure CreatePete(cp_idx : byte);
+begin
+	actors[cp_idx].actor_type := actor_type_sprite;
+	
+	actors[cp_idx].x := pete_start_x;
+	actors[cp_idx].y := pete_start_y;
+	actors[cp_idx].actor_index := actor_pete;
+	actors[cp_idx].color := yellow;
+	actors[cp_idx].can_fall := 0;
+	actors[cp_idx].can_climb := 0;
+	actors[cp_idx].has_flipped_sprite := 1;
+	actors[cp_idx].enabled := 1;
+	actors[cp_idx].animation_counter := 0;
+	actors[cp_idx].x_move_counter := 0;
+	actors[cp_idx].y_move_counter := 0;
+	actors[cp_idx].x_skip := 2;
+	actors[cp_idx].y_skip := 1;
+	actors[cp_idx].flashing := 0;
+
+	IdlePete(cp_idx);
+end;
+
+procedure BetweenLevelPete(btl_idx : byte);
+begin
+	actors[btl_idx].x_velocity := 0;
+	actors[btl_idx].y_velocity := 0;
+	actors[btl_idx].x_skip := 2;
+	actors[btl_idx].y_skip := 1;
+	
+	actors[btl_idx].x := 160;
+	actors[btl_idx].y := 120;
+
+	actors[btl_idx].animation := pete_between_levels_idx;
+	//actors[fp_idx].flip := 0;
+	actors[btl_idx].flipy := 1;
+	actors[btl_idx].animation_speed := 15;
+	actors[btl_idx].has_flipped_sprite := 0;
+	actors[btl_idx].animation_counter := 0;
+	actors[btl_idx].x_move_counter := 0;
+	actors[btl_idx].y_move_counter := 0;
+	actors[btl_idx].current_sprite := 0;
+end;   
+
+
+procedure DiePete(dpete_idx : byte);
+begin
+
+	if (actors[dpete_idx].animation = pete_die_idx) then return;
+	if (actors[dpete_idx].animation = pete_dead_idx) then return;
+
+	actors[dpete_idx].x_velocity := 0;
+	actors[dpete_idx].y_velocity := 0;
+	actors[dpete_idx].animation := pete_die_idx;
+	actors[dpete_idx].current_sprite := 0;
+	//actors[ip_idx].flip := 0;
+	actors[dpete_idx].has_flipped_sprite := 0;
+	actors[dpete_idx].counter := 0;
+	actors[dpete_idx].ttl := 64;
+	actors[dpete_idx].animation_speed := 15;
+	actors[dpete_idx].animation_counter := 0;
+	actors[dpete_idx].x_move_counter := 0;
+	actors[dpete_idx].y_move_counter := 0;
+	actors[dpete_idx].flashing := 0;
+
+	StopPick(pick_index);
+	StopKey(key_index);
+	StopAllBoulders();
+	ResetAllSoundChannels();
+	PlayDieSound();
+
+/*	PlaySound(sid_channel2, 
+		15,  // Volume
+		8,  // Hi byte frequency
+		0*16+0,  // Attack voice 1
+		6*16 + 6,   // Sustain = 16*15 + release=6
+		1 +sid_tri,  // Waveform
+		sid_tri);  // waveform 
+*/
+
+end;
+
+procedure DeadPete(depete_idx : byte);
+begin
+
+	actors[depete_idx].x_velocity := 0;
+	actors[depete_idx].y_velocity := 0;
+	actors[depete_idx].animation := pete_dead_idx;
+	actors[depete_idx].current_sprite := 0;
+	//actors[ip_idx].flip := 0;
+	actors[depete_idx].has_flipped_sprite := 0;
+	actors[dpete_idx].counter := 0;
+	actors[depete_idx].ttl := 64;
+	actors[depete_idx].animation_speed := 0;
+	actors[depete_idx].animation_counter := 0;
+	actors[depete_idx].x_move_counter := 0;
+	actors[depete_idx].y_move_counter := 0;
+	actors[depete_idx].flashing := 1;
+	
+	PlayDeadSound();
+
+end;
+
+
+// HoldPick
+procedure HoldPick(hpi_idx : byte, play_snd : byte);
+begin
+	actors[hpi_idx].x_velocity := 0;
+	actors[hpi_idx].y_velocity := 0;
+	actors[hpi_idx].animation := pick_hold_idx;
+	actors[hpi_idx].current_sprite := 0;
+	actors[hpi_idx].animation_speed := pick_animation_speed;
+	actors[hpi_idx].ttl := hold_pick_ttl;//255;
+	actors[hpi_idx].counter := 0;
+	actors[hpi_idx].enabled := 1;
+	actors[hpi_idx].flip := 0;
+	actors[hpi_idx].flipy := 0;
+	actors[hpi_idx].flashing := 0;
+	actors[hpi_idx].color := purple;
+	actors[hpi_idx].has_flipped_sprite := 1;
+
+	ResetSpriteMoveAndAnimation(hpi_idx);
+	
+	StopPickEndSound();
+	StopPickSpinSound();
+
+	if (play_snd) then PlayCollectPickSound();
+
+	PlayPickSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+
+end;
+
+
+procedure NewLifePete(nlpete_idx : byte);
+var 
+nlp_index : byte;
+begin
+	dec(pete_lives);
+	DrawLives();
+	
+	if (pete_lives = 0) then 
+	begin
+		game_over := 1;
+		return;
+	end;
+
+	// stop all boulders
+	for nlp_index := 0 to max_boulders do
+	begin
+		StopBoulder(boulder_indexes[nlp_index]);
+	end;	
+
+
+	StopKey(key_index);
+	CreatePete(nlpete_idx);
+	HoldPick(pick_index, 0);
+end;
+
+
+
+procedure CreateBoulder(cb_idx : byte);
+begin
+	actors[cb_idx].actor_type := actor_type_sprite;
+	actors[cb_idx].x := 0;
+	actors[cb_idx].y := 0;
+	actors[cb_idx].actor_index := actor_boulder;
+	actors[cb_idx].color := blue;
+	actors[cb_idx].can_fall := 0;
+	actors[cb_idx].can_climb := 0;
+	actors[cb_idx].has_flipped_sprite := 0;
+	actors[cb_idx].x_velocity := 0;
+	actors[cb_idx].y_velocity := 0;
+	actors[cb_idx].flip := 0;
+	actors[cb_idx].animation := boulder_idle_idx;
+	actors[cb_idx].current_sprite := 0;
+	actors[cb_idx].animation_speed := 0;
+	actors[cb_idx].ttl := 0;
+	actors[cb_idx].counter := 0;
+	actors[cb_idx].x_skip := 2;
+	actors[cb_idx].y_skip := 1;
+	actors[cb_idx].has_flipped_sprite := 0;
+
+	
+	actors[cb_idx].enabled := 0;
+end;
+
+
+procedure CreatePick(cpi_idx : byte);
+begin
+	actors[cpi_idx].actor_type := actor_type_sprite;
+	actors[cpi_idx].x := 0;
+	actors[cpi_idx].y := 0;
+	actors[cpi_idx].actor_index := actor_pick;
+	actors[cpi_idx].color := purple;
+	actors[cpi_idx].can_fall := 0;
+	actors[cpi_idx].can_climb := 0;
+	actors[cpi_idx].has_flipped_sprite := 0;
+	actors[cpi_idx].x_velocity := 0;
+	actors[cpi_idx].y_velocity := 0;
+	actors[cpi_idx].flip := 0;
+	actors[cpi_idx].animation := pick_idle_idx;
+	actors[cpi_idx].current_sprite := 0;
+	actors[cpi_idx].animation_speed := 0;
+	actors[cpi_idx].ttl := 0;
+	actors[cpi_idx].counter := 0;
+	actors[cpi_idx].x_skip := 1;
+	actors[cpi_idx].y_skip := 1;
+	actors[cpi_idx].has_flipped_sprite := 0;
+	actors[cpi_idx].enabled := 0;
+end;
+
+procedure StartPick(spi_idx : byte, spi_x : integer, spi_y : byte);
+begin
+	actors[spi_idx].x_velocity := 0;
+	actors[spi_idx].y_velocity := pick_y_speed;
+	actors[spi_idx].animation := pick_spin_idx;
+	actors[spi_idx].current_sprite := 0;
+	actors[spi_idx].animation_speed := 16;
+	actors[spi_idx].ttl := 0;
+	actors[spi_idx].counter := 0;
+	actors[spi_idx].enabled := 1;
+	actors[spi_idx].flip := 0;
+	actors[spi_idx].flipy := 1;
+	actors[spi_idx].x := spi_x;
+	actors[spi_idx].y := spi_y;
+	actors[spi_idx].flashing := 0;
+	actors[spi_idx].color := purple;
+	actors[spi_idx].has_flipped_sprite := 0;
+
+	ResetSpriteMoveAndAnimation(spi_idx);
+	
+	StopPickEndSound();
+	PlayPickSpinSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+
+end;
+
+procedure WaitPick(wpi_idx : byte);
+begin
+	actors[spi_idx].x_velocity := 0;
+	actors[spi_idx].y_velocity := 0;
+	actors[spi_idx].animation := pick_wait_idx;
+	actors[spi_idx].current_sprite := 0;
+	actors[spi_idx].animation_speed := 0;
+	actors[spi_idx].ttl := wait_pick_ttl;//255;
+	actors[spi_idx].counter := 0;
+	actors[spi_idx].enabled := 1;
+	actors[spi_idx].flip := 0;
+	actors[spi_idx].flipy := 1;
+	
+	StopPickSpinSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+procedure FlashPick(fpi_idx : byte);
+begin
+	actors[fpi_idx].x_velocity := 0;
+	actors[fpi_idx].y_velocity := 0;
+	actors[fpi_idx].animation := pick_flash_idx;
+	actors[fpi_idx].current_sprite := 0;
+	actors[fpi_idx].animation_speed := 0;
+	actors[fpi_idx].ttl := flash_pick_ttl;//80;
+	actors[fpi_idx].counter := 0;
+	actors[fpi_idx].enabled := 1;
+	actors[fpi_idx].flip := 0;
+	actors[fpi_idx].flipy := 1;
+	actors[fpi_idx].flashing := 1;
+	actors[fpi_idx].color := white;
+	
+	PlayPickEndSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+// HoldFlashPick
+procedure HoldFlashPick(hfpi_idx : byte);
+begin
+	actors[hfpi_idx].x_velocity := 0;
+	actors[hfpi_idx].y_velocity := 0;
+	actors[hfpi_idx].animation := pick_holdflash_idx;
+	actors[hfpi_idx].current_sprite := 0;
+	actors[hfpi_idx].animation_speed := pick_animation_speed;
+	actors[hfpi_idx].ttl := holdflash_pick_ttl;//80;
+	actors[hfpi_idx].counter := 0;
+	actors[hfpi_idx].enabled := 1;
+	actors[hfpi_idx].flip := 0;
+	actors[hfpi_idx].flipy := 0;
+	actors[hfpi_idx].flashing := 1;
+	actors[hfpi_idx].color := white;
+	
+	StopPickSound();
+	PlayPickEndSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+
+
+/////////////////////////////////////
+// Key
+/////////////////////////////////////
+
+procedure CreateKey(ckey_idx : byte);
+begin
+	actors[ckey_idx].actor_type := actor_type_sprite;
+	actors[ckey_idx].x := 0;
+	actors[ckey_idx].y := 0;
+	actors[ckey_idx].actor_index := actor_key;
+	actors[ckey_idx].color := yellow;
+	actors[ckey_idx].can_fall := 0;
+	actors[ckey_idx].can_climb := 0;
+	actors[ckey_idx].has_flipped_sprite := 0;
+	actors[ckey_idx].x_velocity := 0;
+	actors[ckey_idx].y_velocity := 0;
+	actors[ckey_idx].flip := 0;
+	actors[ckey_idx].animation := key_idle_idx;
+	actors[ckey_idx].current_sprite := 0;
+	actors[ckey_idx].animation_speed := 0;
+	actors[ckey_idx].ttl := 0;
+	actors[ckey_idx].counter := 0;
+	actors[ckey_idx].x_skip := 1;
+	actors[ckey_idx].y_skip := 1;
+	actors[ckey_idx].has_flipped_sprite := 0;
+	actors[ckey_idx].enabled := 0;
+	
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(ckey_idx, 4);	
+
+
+end;
+
+procedure StartKey(ske_idx : byte, ske_x : integer, ske_y : byte);
+begin
+	actors[ske_idx].x_velocity := 0;
+	actors[ske_idx].y_velocity := key_y_speed;
+	actors[ske_idx].animation := key_spin_idx;
+	actors[ske_idx].current_sprite := 0;
+	actors[ske_idx].animation_speed := 16;
+	actors[ske_idx].ttl := 0;
+	actors[ske_idx].counter := 0;
+	actors[ske_idx].enabled := 1;
+	actors[ske_idx].flip := 0;
+	actors[ske_idx].flipy := 0;
+	actors[ske_idx].x := ske_x;
+	actors[ske_idx].y := ske_y;
+	actors[ske_idx].flashing := 0;
+	actors[ske_idx].color := yellow;
+	actors[ske_idx].has_flipped_sprite := 0;
+
+	ResetSpriteMoveAndAnimation(ske_idx);
+	PlayKeySpinSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+
+end;
+// HoldPick
+procedure HoldKey(hke_idx : byte);
+begin
+	actors[hke_idx].x_velocity := 0;
+	actors[hke_idx].y_velocity := 0;
+	actors[hke_idx].animation := key_hold_idx;
+	actors[hke_idx].current_sprite := 0;
+	actors[hke_idx].animation_speed := 0;
+	actors[hke_idx].ttl := 255;
+	actors[hke_idx].counter := 0;
+	actors[hke_idx].enabled := 1;
+	actors[hke_idx].flip := 0;
+	actors[hke_idx].flipy := 0;
+	actors[hke_idx].flashing := 0;
+	actors[hke_idx].color := yellow;
+	actors[hke_idx].has_flipped_sprite := 0;
+
+	actors[hke_idx].x := 310;
+	actors[hke_idx].y := 223;
+
+
+	ResetSpriteMoveAndAnimation(hke_idx);
+
+
+	StopKeySpinSound();
+	StopKeyFlashSound();
+	PlayCollectKeySound();
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+
+end;
+
+procedure WaitKey(wke_idx : byte);
+begin
+	actors[wke_idx].x_velocity := 0;
+	actors[wke_idx].y_velocity := 0;
+	actors[wke_idx].animation := key_wait_idx;
+	actors[wke_idx].current_sprite := 0;
+	actors[wke_idx].animation_speed := 0;
+	actors[wke_idx].ttl := wait_key_ttl;//255;
+	actors[wke_idx].counter := 0;
+	actors[wke_idx].enabled := 1;
+	actors[wke_idx].flip := 0;
+	actors[wke_idx].flipy := 0;
+	StopKeySpinSound();
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+procedure FlashKey(fke_idx : byte);
+begin
+	actors[fke_idx].x_velocity := 0;
+	actors[fke_idx].y_velocity := 0;
+	actors[fke_idx].animation := key_flash_idx;
+	actors[fke_idx].current_sprite := 0;
+	actors[fke_idx].animation_speed := 0;
+	actors[fke_idx].ttl := flash_key_ttl;//80;
+	actors[fke_idx].counter := 0;
+	actors[fke_idx].enabled := 1;
+	actors[fke_idx].flip := 0;
+	actors[fke_idx].flipy := 0;
+	actors[fke_idx].flashing := 1;
+	actors[fke_idx].color := white;
+	PlayKeyFlashSound();
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+// HoldFlashPick
+procedure HoldFlashKey(hfke_idx : byte);
+begin
+	actors[hfke_idx].x_velocity := 0;
+	actors[hfke_idx].y_velocity := 0;
+	actors[hfke_idx].animation := key_holdflash_idx;
+	actors[hfke_idx].current_sprite := 0;
+	actors[hfke_idx].animation_speed := 12;
+	actors[hfke_idx].ttl := 80;
+	actors[hfke_idx].counter := 0;
+	actors[hfke_idx].enabled := 1;
+	actors[hfke_idx].flip := 0;
+	actors[hfke_idx].flipy := 0;
+	actors[hfke_idx].flashing := 1;
+	actors[hfke_idx].color := white;
+
+/*
+moveto(1,23,hi(screen_char_loc));
+printdecimal(spi_idx, 4);	
+moveto(10,23,hi(screen_char_loc));
+printdecimal(spi_x, 4);	
+moveto(20,23,hi(screen_char_loc));
+printdecimal(spi_y, 4);	
+*/
+end;
+
+
+/////////////////////////////////////
+
+procedure StartBoulder(sb_idx : byte, sb_x : integer, sb_y : byte, sb_flip : byte);
+begin
+	actors[sb_idx].x_velocity := boulder_x_speed;
+	actors[sb_idx].y_velocity := 0;
+	actors[sb_idx].animation := boulder_idle_idx;
+	actors[sb_idx].current_sprite := 0;
+	actors[sb_idx].animation_speed := 17;
+	actors[sb_idx].ttl := 0;
+	actors[sb_idx].counter := 0;
+	actors[sb_idx].enabled := 1;
+	actors[sb_idx].flip := sb_flip;
+	actors[sb_idx].x := sb_x;
+	actors[sb_idx].y := sb_y;
+	actors[sb_idx].color := blue;
+	ResetSpriteMoveAndAnimation(sb_idx);
+
+end;
+
+procedure StartFreeBoulderFromTileCoords(x, y : integer, sfb_flip : byte);
+var
+	sprite_x : integer;
+	sprite_y : byte;
+	next_boulder : byte;
+	sfb_index : byte;
+	found_index : byte;
+begin
+	// go through boulders and find next free one
+	for sfb_index := 0 to max_boulders do
+	begin
+		found_index := boulder_indexes[sfb_index];
+		if (actors[found_index].enabled = 0) then
+		begin
+			// convert coords to sprite coords
+			sprite_x := (x shl 3) + 14;
+			sprite_y := (y shl 3) + 36;
+			StartBoulder(found_index, sprite_x, sprite_y, sfb_flip);
+			return;
+		end;
+	end;
+	
+end;
+
+
+procedure ExplodeBoulder(eb_idx : byte, make_pick : byte);
+begin
+	if (actors[eb_idx].animation = boulder_fireball_idx) then
+	begin
+		StopFireballSound(eb_idx);
+	end;
+	
+	actors[eb_idx].x_velocity := 0;
+	actors[eb_idx].y_velocity := 0;
+	actors[eb_idx].animation := boulder_explode_idx;
+	if (make_pick = 1) then actors[eb_idx].animation := boulder_explodepick_idx;
+	actors[eb_idx].current_sprite := 0;
+	actors[eb_idx].animation_speed := 10;
+	actors[eb_idx].ttl := 20;
+	actors[eb_idx].counter := 0;
+	actors[eb_idx].enabled := 1;
+	actors[eb_idx].flip := 0;
+	actors[eb_idx].color := white;
+
+
+	PlayBoulderCrashSound();
+/*	PlaySound(sid_channel1, 
+		15,  // Volume
+		8,  // Hi byte frequency
+		0*16+0,  // Attack voice 1
+		16*16 + 10,   // Sustain = 16*15 + release=6
+		1 +sid_noise,  // Waveform
+		sid_noise);  // waveform 
+*/
+
+end;
+
+procedure FireballBoulder(fbb_idx : byte);
+begin
+	actors[fbb_idx].x_velocity := 0;
+	actors[fbb_idx].y_velocity := boulder_y_speed;
+	actors[fbb_idx].animation := boulder_fireball_idx;
+	actors[fbb_idx].current_sprite := 0;
+	actors[fbb_idx].animation_speed := 17;
+	actors[fbb_idx].ttl := 0;
+	actors[fbb_idx].counter := 0;
+	actors[fbb_idx].enabled := 1;
+	actors[fbb_idx].flip := 0;
+	actors[fbb_idx].flipy := 1;
+	actors[fbb_idx].color := yellow;
+	ResetSpriteMoveAndAnimation(fbb_idx);
+	PlayFireballSound(fbb_idx);
+end;
+
+
+
+procedure RollLadder(rl_idx, rl_offset : byte);
+begin
+	actors[rl_idx].x_velocity := 0;
+	actors[rl_idx].y_velocity := 0;
+	actors[rl_idx].animation := ladder_roll_idx;
+	actors[rl_idx].current_sprite := rl_offset;
+	actors[rl_idx].flip := 0;
+	actors[rl_idx].animation_speed := 16;
+
+//moveto((rl_idx-1)*10,24,hi(screen_char_loc));
+//printdecimal(1, 4);	
+
+
+end;   
+
+procedure StopLadder(sl_idx : byte);
+begin
+	actors[sl_idx].x_velocity := 0;
+	actors[sl_idx].y_velocity := 0;
+	actors[sl_idx].animation := ladder_stop_idx;
+	actors[sl_idx].current_sprite := 0;
+	actors[sl_idx].flip := 0;
+	actors[sl_idx].animation_speed := 0;
+//moveto((sl_idx-1)*10,24,hi(screen_char_loc));
+//printdecimal(0, 4);	
+
+end;   
+
+
+procedure PositionLadder(pl_idx : byte);
+var ladder_line, ladder_x, ladder_y, ladder_ok, pl_hole_x : byte;
+begin
+
+	if (actors[pl_idx].yt > 0) then
+	begin
+		// blank out old location
+		screenmemory := #screen_char_loc3;		// 1) here we assign screenmemory with the address of the screen ($0400)
+	//	start_char_loc := 40 * actors[pl_idx].yt + actors[pl_idx].x;// + 10;
+
+		screenmemory := screenmemory + 40 * actors[pl_idx].yt + actors[pl_idx].x;;
+		screenmemory[0] := 80;
+		screenmemory[1] := 80;
+		screenmemory[40] := 80;					// 2) by adding [0] to the variable name, we can write to the address screenmemory is pointing to, ie: write to address $0400 
+		screenmemory[41] := 80;	
+	end;
+	has_ladder_lookup[actors[pl_idx].yt] := 0;
+
+
+	ladder_ok := 0;
+	 // pick a random location
+	//ladder_line := mod(random(), num_lines-1);
+	while ladder_ok = 0 do
+	begin
+		//rand(0,num_lines-1,ladder_line);
+		ladder_line := mod(random(), num_lines-1);
+	 	ladder_y := (ladder_line * 3) + 4;
+	
+		// see if this line already has a ladder
+		if (has_ladder_lookup[ladder_y] = 0) then ladder_ok := 1;
+ 	end;
+
+	//ladder_x := mod(random(), 37) + 2;
+	//rand(2,37,ladder_x);
+	ladder_ok := 0;
+	pl_hole_x := level_holes_lookup[ladder_y-1]-2;
+
+	while ladder_ok = 0 do
+	begin
+		ladder_ok := 1;
+		//rand(2,37,ladder_x);
+		ladder_x := mod(random(), 36) + 2;		
+		if ((ladder_x > pl_hole_x ) and (ladder_x < pl_hole_x + 7)) then ladder_ok := 0;
+		if ((ladder_x > 16 ) and (ladder_x < 22)) then ladder_ok := 0;
+		
+	end;
+
+// while (is_hole(line, location) or is_portal(line, location)) do
+//  location = flr(rnd(10))
+// end
+
+// if (is_portal(line, location)) then
+//	o.debug = true
+// end
+  
+
+ 	actors[pl_idx].x := ladder_x;//mod(random(),39);
+	actors[pl_idx].yt := ladder_y;//mod(random(),24);
+	
+	has_ladder_lookup[actors[pl_idx].yt] := 1;
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(ladder_x, 3);	
+//moveto(7,23,hi(screen_char_loc));
+//printdecimal(ladder_y, 3);	
+
+
+end;
+
+procedure CreateLadder(cl_idx, cl_offset : byte);
+var
+x_rnd : integer;
+begin
+
+	actors[cl_idx].actor_type := actor_type_tile;
+	actors[cl_idx].actor_index := actor_ladder;
+	actors[cl_idx].color := white;
+	actors[cl_idx].has_flipped_sprite := 0;
+	actors[cl_idx].enabled := 1;
+
+	PositionLadder(cl_idx);
+	RollLadder(cl_idx, cl_offset);
+end;
+
+procedure StopPortal(spt_idx : byte);
+var
+begin
+
+	actors[spt_idx].color := mod(random(), 7) + 1;
+
+	//if (actors[spt_idx].color = yellow) then inc(actors[spt_idx].color);
+
+	if (random() = 64) then actors[spt_idx].color := black;
+		
+	//rand(1,7,actors[spt_idx].color);
+	actors[spt_idx].animation := portal_stop_idx;
+	actors[spt_idx].current_sprite := 0;
+	actors[spt_idx].animation_speed := 0;
+	actors[spt_idx].counter := 0;
+	//rand(10,255,actors[spt_idx].ttl);
+	actors[spt_idx].ttl := mod(random(), 128) + 10;
+	
+end;
+
+procedure SpinPortal(stt_idx : byte);
+var
+begin
+	actors[stt_idx].animation := portal_spin_idx;
+	actors[stt_idx].current_sprite := 0;
+	actors[stt_idx].animation_speed := 17;
+	actors[stt_idx].counter := 0;
+end;
+
+
+procedure CreatePortal(cpt_idx : byte, cpt_y : integer);
+var
+begin
+
+	actors[cpt_idx].actor_type := actor_type_tile;
+	actors[cpt_idx].x := 18;
+	actors[cpt_idx].yt := cpt_y;
+	actors[cpt_idx].x_velocity := 0;
+	actors[cpt_idx].y_velocity := 0;
+	
+	actors[cpt_idx].actor_index := actor_portal;
+	actors[cpt_idx].has_flipped_sprite := 0;
+	actors[cpt_idx].enabled := 1;
+
+	actors[cpt_idx].flip := 0;
+
+
+	StopPortal(cpt_idx);
+end;
+
+
+procedure CreateAnimPointers();
+var
+	cap_anim_idx : byte;
+begin
+/*	for cap_anim_idx := 0 to max_animation_pointers do	
+	begin		
+ 		if (cap_anim_idx = pete_walk_idx) then anim_pointers[cap_anim_idx] := #pete_walk;
+		if (cap_anim_idx = pete_idle_idx) then anim_pointers[cap_anim_idx] := #pete_idle;
+		if (cap_anim_idx = pete_fall_idx) then anim_pointers[cap_anim_idx] := #pete_fall;
+		if (cap_anim_idx = ladder_roll_idx) then anim_pointers[cap_anim_idx] := #ladder_roll;
+		if (cap_anim_idx = ladder_stop_idx) then anim_pointers[cap_anim_idx] := #ladder_stop;
+		if (cap_anim_idx = pete_climb_idx) then anim_pointers[cap_anim_idx] := #pete_climb;
+		if (cap_anim_idx = pete_jump_idx) then anim_pointers[cap_anim_idx] := #pete_jump;
+		if (cap_anim_idx = portal_stop_idx) then anim_pointers[cap_anim_idx] := #portal_stop;
+		if (cap_anim_idx = portal_spin_idx) then anim_pointers[cap_anim_idx] := #portal_spin;
+		if (cap_anim_idx = pete_climbside_idx) then anim_pointers[cap_anim_idx] := #pete_climbside;
+		if (cap_anim_idx = pete_walkside_idx) then anim_pointers[cap_anim_idx] := #pete_climbside;
+		if (cap_anim_idx = pete_rebound_idx) then anim_pointers[cap_anim_idx] := #pete_rebound;
+		if (cap_anim_idx = boulder_normal_idx) then anim_pointers[cap_anim_idx] := #boulder_normal;
+		if (cap_anim_idx = boulder_fall_idx) then anim_pointers[cap_anim_idx] := #boulder_normal;
+		if (cap_anim_idx = boulder_bounce_idx) then anim_pointers[cap_anim_idx] := #boulder_normal;
+	end;*/
+end;
+
+procedure DisableAllActors();
+var
+	daa_index : byte;
+begin
+	for daa_index := 0 to max_actors do	
+	begin		
+		SetActorDefaults(daa_index, 0);
+	end;
+end;
+
+procedure SetupBetweenLevelActors();
+var
+sbla_index: byte;
+begin
+
+	num_actors := 0;
+	
+	CreatePete(num_actors);
+	BetweenLevelPete(num_actors);
+	inc(num_actors);
+
+end;
+
+procedure SetupActors();
+var
+sa_index: byte;
+begin
+
+	pick_index := 4;
+	key_index := 5;
+	pete_index := 0;
+	bottom_portal := 3;
+
+	sprite_indexes_valid := 0;
+	num_actors := 0;
+
+	for sa_index := 0 to max_actors do	
+	begin		
+		SetActorDefaults(sa_index, 1);
+	end;
+	// setup actors
+	///////////////
+	
+	CreatePete(num_actors);
+	inc(num_actors);
+
+	CreatePortal(num_actors, 2);
+	inc(num_actors);
+	CreatePortal(num_actors, 11);
+	inc(num_actors);
+	CreatePortal(num_actors, 20);
+	inc(num_actors);
+
+	CreatePick(num_actors);
+	HoldPick(num_actors, 0);
+	inc(num_actors);
+	
+	CreateKey(num_actors);
+	inc(num_actors);
+
+
+	for sa_index := 0 to level_num_ladders do	
+		begin		
+		CreateLadder(num_actors, sa_index*4);
+		inc(num_actors);
+	end;
+
+	for sa_index := 0 to max_boulders do
+	begin
+		CreateBoulder(num_actors);
+		boulder_indexes[sa_index] := num_actors;
+		//StartBoulder(num_actors);
+		inc(num_actors);
+	end;
+
+
+
+//moveto(2*index,23,hi(screen_char_loc));
+//printdecimal(actors[index].actor_index, 4);	
+
+//moveto(1,23,hi(screen_char_loc));
+//printdecimal(pick_index, 4);	
+
+//moveto(20,23,hi(screen_char_loc));
+//printdecimal(actors[pick_index].actor_index, 4);	
+
+
+//moveto(20,23,hi(screen_char_loc));
+//printdecimal(key_index, 4);	
+//moveto(30,23,hi(screen_char_loc));
+//printdecimal(actors[key_index].actor_index, 4);	
+
+
+end;
+
+
+
+procedure WalkPete(wp_idx, wp_dir, wp_reset : byte);
+begin
+	actors[wp_idx].x_velocity := pete_walk_speed;
+	actors[wp_idx].y_velocity := 0;
+	actors[wp_idx].animation := pete_walk_idx;
+	actors[wp_idx].flip := wp_dir;
+	actors[wp_idx].animation_speed := 15;
+	actors[wp_idx].has_flipped_sprite := 1;
+
+	actors[wp_idx].x_skip := 2;
+	actors[wp_idx].y_skip := 1;
+
+
+	if (actors[wp_idx].can_climb = 1) then 
+	begin
+		actors[wp_idx].animation := pete_walkside_idx;
+		actors[wp_idx].current_sprite := 0;
+		actors[wp_idx].animation_speed := 0;
+	end;
+
+	if (wp_reset = 1) then 
+	begin
+		actors[wp_idx].current_sprite := 0;
+		actors[wp_idx].animation_counter := 0;
+		actors[wp_idx].x_move_counter := 0;
+		actors[wp_idx].y_move_counter := 0;
+		
+	end;
+end;   
+
+procedure KeyPete(kpe_idx : byte);
+begin
+	actors[kpe_idx].flashing := 1;
+end;   
+
+
+procedure FallPete(fp_idx, fp_reset : byte);
+begin
+	actors[fp_idx].x_velocity := 0;
+	actors[fp_idx].y_velocity := pete_fall_speed;
+	actors[fp_idx].x_skip := 2;
+	actors[fp_idx].y_skip := 1;
+	
+
+	actors[fp_idx].animation := pete_fall_idx;
+	//actors[fp_idx].flip := 0;
+	actors[fp_idx].flipy := 1;
+	actors[fp_idx].animation_speed := 13;
+	actors[fp_idx].has_flipped_sprite := 0;
+	if (fp_reset = 1) then 
+	begin
+		actors[fp_idx].animation_counter := 0;
+		actors[fp_idx].x_move_counter := 0;
+		actors[fp_idx].y_move_counter := 0;
+		actors[fp_idx].current_sprite := 0;
+	end;
+end;   
+
+
+
+
+procedure ClimbPete(cpe_idx, cp_xdir, cp_ydir, cp_reset : byte);
+var
+
+begin
+	actors[cpe_idx].x_velocity := 0;
+	actors[cpe_idx].y_velocity := 0;
+	actors[cpe_idx].animation := pete_climb_idx;
+	actors[cpe_idx].flip := 0;
+	actors[cpe_idx].flipy := 0;
+	actors[cpe_idx].animation_speed := 0;
+	actors[cpe_idx].has_flipped_sprite := 0;
+
+	actors[cpe_idx].x_skip := 2;
+	actors[cpe_idx].y_skip := 2;
+	
+	if (cp_xdir = actor_direction_none) then
+	begin
+		// calculate the ladder x centre and force pete to the middle of it
+		// can_climb holds the index of the ladder he can climb
+		// convert from tile coords to sprite coords
+		actors[cpe_idx].x := (actors[actors[cpe_idx].can_climb].x shl 3) + 20;
+
+	end
+	//if (cp_xdir <> actor_direction_none) then 
+	else
+	begin
+		actors[cpe_idx].x_velocity := pete_walk_speed;
+		actors[cpe_idx].animation_speed := 0;
+		actors[cpe_idx].animation := pete_climbside_idx;
+		actors[cpe_idx].has_flipped_sprite := 1;
+		actors[cpe_idx].current_sprite := 0;
+
+	end;
+	if (cp_ydir <> actor_direction_none) then 
+	begin
+		actors[cpe_idx].y_velocity := pete_walk_speed;
+		actors[cpe_idx].animation_speed := 13;
+	end;
+	if (cp_xdir = actor_direction_reverse) then actors[cpe_idx].flip := 1;
+	if (cp_ydir = actor_direction_reverse) then actors[cpe_idx].flipy := 1;
+	
+	if (cp_reset = 1) then 
+	begin
+		actors[cpe_idx].animation_counter := 0;
+		actors[cpe_idx].x_move_counter := 0;
+		actors[cpe_idx].y_move_counter := 0;
+		//actors[cpe_idx].current_sprite := 0;
+	end;
+end;   
+
+procedure JumpPete(jpe_idx, jp_xdir, jp_ydir, jp_reset : byte);
+begin
+
+	//actors[jpe_idx].x_velocity := 0;
+	//actors[jpe_idx].y_velocity := 0;
+	actors[jpe_idx].animation := pete_jump_idx;
+	actors[jpe_idx].has_flipped_sprite := 1;
+	actors[jpe_idx].animation_speed := 13;
+	actors[jpe_idx].y_velocity := 0;
+	
+	actors[jpe_idx].x_skip := 2;
+	actors[jpe_idx].y_skip := 1;
+
+
+	if (jp_xdir <> actor_direction_unchanged) then 
+	begin
+		actors[jpe_idx].x_velocity := pete_walk_speed;
+		actors[jpe_idx].x_move_counter := 0;
+		actors[jpe_idx].y_move_counter := 0;
+		//actors[jpe_idx].flip := 0;
+	end;
+	if (jp_ydir <> actor_direction_unchanged) then 
+	begin
+		//actors[jpe_idx].y_velocity := 2;
+		actors[jpe_idx].flipy := 0;
+	end;
+	
+	if (jp_xdir = actor_direction_none) then 
+	begin
+		actors[jpe_idx].x_velocity := 0;
+		//actors[jpe_idx].flip := 0;
+	end;
+	if (jp_ydir <> actor_direction_none) then 
+	begin
+		actors[jpe_idx].y_velocity := 0;
+		actors[jpe_idx].flipy := 0;
+	end;
+
+	if (jp_xdir = actor_direction_reverse) then actors[jpe_idx].flip := 1;
+	if (jp_ydir = actor_direction_reverse) then actors[jpe_idx].flipy := 1;
+
+	if (jp_xdir = actor_direction_forward) then actors[jpe_idx].flip := 0;
+	if (jp_ydir = actor_direction_forward) then actors[jpe_idx].flipy := 0;
+
+	
+	if (jp_reset = 1) then 
+	begin
+		actors[jpe_idx].animation_counter := 0;
+		actors[jpe_idx].current_sprite := 0;
+		can_score_on_jump := 1;
+		PlayJumpSound();
+	end;
+	
+
+end;   
+
+procedure DuckPete(dpe_idx, dp_xdir, dp_ydir, dp_reset : byte);
+begin
+
+	//actors[jpe_idx].x_velocity := 0;
+	//actors[jpe_idx].y_velocity := 0;
+	actors[dpe_idx].animation := pete_duck_idx;
+	actors[dpe_idx].has_flipped_sprite := 1;
+	actors[dpe_idx].animation_speed := 13;
+	actors[dpe_idx].y_velocity := 0;
+	
+	actors[dpe_idx].x_skip := 2;
+	actors[dpe_idx].y_skip := 1;
+
+
+	if (dp_xdir <> actor_direction_unchanged) then 
+	begin
+		actors[dpe_idx].x_velocity := pete_walk_speed;
+		actors[dpe_idx].x_move_counter := 0;
+		actors[dpe_idx].y_move_counter := 0;
+		//actors[jpe_idx].flip := 0;
+	end;
+	if (dp_ydir <> actor_direction_unchanged) then 
+	begin
+		//actors[jpe_idx].y_velocity := 2;
+		actors[dpe_idx].flipy := 0;
+	end;
+	
+	if (dp_xdir = actor_direction_none) then 
+	begin
+		actors[dpe_idx].x_velocity := 0;
+		//actors[jpe_idx].flip := 0;
+	end;
+	if (dp_ydir <> actor_direction_none) then 
+	begin
+		actors[dpe_idx].y_velocity := 0;
+		actors[dpe_idx].flipy := 0;
+	end;
+
+	if (dp_xdir = actor_direction_reverse) then actors[dpe_idx].flip := 1;
+	if (dp_ydir = actor_direction_reverse) then actors[dpe_idx].flipy := 1;
+
+	if (dp_xdir = actor_direction_forward) then actors[dpe_idx].flip := 0;
+	if (dp_ydir = actor_direction_forward) then actors[dpe_idx].flipy := 0;
+
+	
+	if (dp_reset = 1) then 
+	begin
+		actors[dpe_idx].animation_counter := 0;
+		actors[dpe_idx].current_sprite := 0;
+		PlayJumpSound();
+	end;
+	
+
+end;   
+
+procedure ReboundPete(rpe_idx : byte);
+begin
+	actors[rpe_idx].animation := pete_rebound_idx;
+	actors[rpe_idx].has_flipped_sprite := 1;
+	actors[rpe_idx].animation_speed := 13;
+	actors[rpe_idx].x_velocity := pete_walk_speed;
+	actors[rpe_idx].ttl := 10;
+	actors[rpe_idx].counter := 0;
+
+	actors[rpe_idx].animation_counter := 0;
+	actors[rpe_idx].x_move_counter := 0;
+	actors[rpe_idx].y_move_counter := 0;
+	actors[rpe_idx].current_sprite := 0;
+
+
+	actors[rpe_idx].x_skip := 2;
+	actors[rpe_idx].y_skip := 1;
+
+
+	if (actors[rpe_idx].flip = 1) then 
+	begin
+		actors[rpe_idx].flip := 0;
+	end
+	else
+	begin
+		actors[rpe_idx].flip := 1;
+	end;
+	
+	PlayReboundSound();
+end;   
+
+
+procedure SetTempAnim(sta_anim_idx : byte);
+begin
+/*	case sta_anim_idx of:
+	   	pete_walk_idx: temp_anim := #pete_walk;
+	   	pete_idle_idx: temp_anim := #pete_idle;
+	   	pete_fall_idx: temp_anim := #pete_fall;
+	   	ladder_roll_idx: temp_anim := #ladder_roll;
+	   	ladder_stop_idx: temp_anim := #ladder_stop;
+	   	pete_climb_idx: temp_anim := #pete_climb;
+	   	pete_jump_idx: temp_anim := #pete_jump;
+	   	portal_stop_idx: temp_anim := #portal_stop;
+	   	portal_spin_idx: temp_anim := #portal_spin;
+	   	pete_climbside_idx: temp_anim := #pete_climbside;
+	   	pete_walkside_idx: temp_anim := #pete_climbside;
+	   	pete_rebound_idx: temp_anim := #pete_rebound;
+		boulder_normal_idx: temp_anim := #boulder_normal;
+		boulder_fall_idx: temp_anim := #boulder_normal;
+		boulder_bounce_idx: temp_anim := #boulder_normal;*/
+		
+	if (sta_anim_idx = pete_walk_idx) then 
+	begin
+		temp_anim := #pete_walk;
+		return;
+	end;
+	if  (sta_anim_idx = pete_idle_idx)  then 
+	begin
+		temp_anim := #pete_idle;
+		return;
+	end;
+	if ( (sta_anim_idx = pete_fall_idx) or (sta_anim_idx = pete_between_levels_idx)) then 
+	begin
+		temp_anim := #pete_fall;
+		return;
+	end;
+	if (sta_anim_idx = ladder_roll_idx) then 
+	begin
+		temp_anim := #ladder_roll;
+		return;
+	end;
+	if (sta_anim_idx = ladder_stop_idx) then 
+	begin
+		temp_anim := #ladder_stop;
+		return;
+	end;
+	if (sta_anim_idx = pete_climb_idx) then 
+	begin
+		temp_anim := #pete_climb;
+		return;
+	end;
+	if (sta_anim_idx = pete_jump_idx) then 
+	begin
+		temp_anim := #pete_jump;
+		return;
+	end;
+	if (sta_anim_idx = portal_stop_idx) then 
+	begin
+		temp_anim := #portal_stop;
+		return;
+	end;
+	if (sta_anim_idx = portal_spin_idx) then 
+	begin
+		temp_anim := #portal_spin;
+		return;
+	end;
+	if (sta_anim_idx = pete_climbside_idx) then 
+	begin
+		temp_anim := #pete_climbside;
+		return;
+	end;
+	if (sta_anim_idx = pete_walkside_idx) then 
+	begin
+		temp_anim := #pete_climbside;
+		return;
+	end;
+	if (sta_anim_idx = pete_rebound_idx) then 
+	begin
+		temp_anim := #pete_rebound;
+		return;
+	end;
+	if (sta_anim_idx = boulder_idle_idx) then 
+	begin
+		temp_anim := #boulder_normal;
+		return;
+	end;
+	if (sta_anim_idx = boulder_fall_idx) then 
+	begin
+		temp_anim := #boulder_normal;
+		return;
+	end;
+	if (sta_anim_idx = boulder_bounce_idx) then 
+	begin
+		temp_anim := #boulder_normal; 
+		return;
+	end;
+	
+// boulder_explode_idx
+	if ( (sta_anim_idx = boulder_explode_idx) or (sta_anim_idx = boulder_explodepick_idx)) then 
+	begin
+		temp_anim := #boulder_explode; 
+		return;
+	end;
+	// boulder_fireball_idx
+	if (sta_anim_idx = boulder_fireball_idx) then 
+	begin
+		temp_anim := #boulder_fireball; 
+		return;
+	end;
+
+	if ( (sta_anim_idx = pick_idle_idx) or (sta_anim_idx = pick_wait_idx)) then 
+	begin
+		temp_anim := #pick_idle; 
+		return;
+	end;
+
+	if (sta_anim_idx = pick_flash_idx) then 
+	begin
+		temp_anim := #pick_idle; 
+		return;
+	end;
+
+
+	if (sta_anim_idx = pick_spin_idx) then 
+	begin
+		temp_anim := #pick_spin; 
+		return;
+	end;
+
+	if ( (sta_anim_idx = pick_hold_idx) or (sta_anim_idx = pick_holdflash_idx)) then 
+	begin
+		temp_anim := #pick_hold; 
+		return;
+	end;
+	
+///////////////////////////
+
+	if ( (sta_anim_idx = key_idle_idx) or (sta_anim_idx = key_wait_idx)) then 
+	begin
+		temp_anim := #key_idle; 
+		return;
+	end;
+
+	if (sta_anim_idx = key_flash_idx) then 
+	begin
+		temp_anim := #key_idle; 
+		return;
+	end;
+
+
+	if (sta_anim_idx = key_spin_idx) then 
+	begin
+		temp_anim := #key_spin; 
+		return;
+	end;
+
+	if ( (sta_anim_idx = key_hold_idx) or (sta_anim_idx = key_holdflash_idx)) then 
+	begin
+		temp_anim := #key_idle; 
+		return;
+	end;
+	
+	if (sta_anim_idx = pete_die_idx) then 
+	begin
+		temp_anim := #pete_die; 
+		return;
+	end;
+
+	if (sta_anim_idx = pete_dead_idx) then 
+	begin
+		temp_anim := #pete_dead; 
+		return;
+	end;
+
+// pete_duck_idx
+	if (sta_anim_idx = pete_duck_idx) then
+	begin
+		temp_anim := #pete_duck; 
+		return;
+	end;
+
+
+end;
+
+// create method to lookup sprite index based on animation id and index
+// uses if to set local pointer to the right animation array
+// then gets the sprite number from the index and returns it
+function GetSpriteIndex( anim_idx, idx : byte ) : byte;
+begin
+	SetTempAnim(anim_idx);
+   	GetSpriteIndex := temp_anim[idx + 1]; 
+end;
+
+function GetNumAnimationSteps( gnas_anim_idx : byte ) : byte;
+begin
+	SetTempAnim(gnas_anim_idx);
+   	GetNumAnimationSteps := temp_anim[0]; 
+end;
+
