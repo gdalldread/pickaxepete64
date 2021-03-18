@@ -1,0 +1,90 @@
+program SampleC64Project;
+
+@include "../pete2/source/sounds.ras"
+
+
+var
+
+
+	i, time: byte = 0;
+	const useKernal : byte = 0;
+	
+// Position of scroller raster line
+	const yposRaster:byte=$A0;
+// music by Uctumi
+	music : incsid("music/courier.sid",2);
+
+// Forward declare "Bottom"
+
+interrupt RasterBottom();
+
+interrupt RasterTop();
+begin
+	StartIRQ(useKernal);
+	Joystick(2);
+
+		screen_bg_col:=green;
+
+	if (time&1 = 1) then
+	begin
+
+		if (joystickleft) then StopFireballSound(1);
+		if (joystickright) then PlayDeadSound();
+		if (joystickup) then StopKeyFlashSound();
+		if (joystickdown) then PlayKeyFlashSound();
+		
+		SoundsDebugMsg();
+		UpdateAllSounds();
+	end;
+		screen_bg_col:=blue;
+	
+	inc(time);
+	CloseIRQ();
+end;
+
+
+
+/*interrupt RasterBottom();
+begin
+	StartIRQ(useKernal);
+	// Wait(3) makes sure that we set the background color when the raster is outside the screen,
+	// removing any artifacts
+	wait(6);
+	screen_fg_col:=purple;
+	screen_bg_col:=black;
+	
+
+	// Scroll here!
+	i:=sine[time*4]/32;
+	Scrollx(i);
+	// Point to ROM font
+	setcharsetlocation($1000); 
+
+	inc(time);
+	RasterIRQ(RasterTop(),$00,useKernal);
+	CloseIRQ();
+end;*/
+/*
+	Initializes the screen etc
+*/
+procedure InitScreen();
+begin
+	// Clear screen with spaces
+	ClearScreen(key_space,screen_char_loc);
+	
+	
+	// Removes the 0th and 39th column on the screen, enabling the "smooth" transition at 
+	// the edges. 
+	//Hideborderx(1);
+end;
+
+begin
+	InitScreen();
+	disableciainterrupts();
+	preventirq();
+	setmemoryconfig(1,useKernal,0);
+
+	// Start the raster chain!
+	StartRasterChain(RasterTop(), 20,useKernal);
+	Loop(); 
+end.
