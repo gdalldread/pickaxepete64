@@ -10,6 +10,7 @@ var
 
 temp : pointer;
 val : byte;
+start_game : byte = 0;
 
 // Automatically export charset
 @export "charsets/charset.flf" "charsets/charset.bin" 256
@@ -400,11 +401,9 @@ end;
 // update the start screen
 interrupt StartRaster();
 var
-	start_game : byte = 0;
 begin
 
 	startirq(1);
-	
 	// Update joystick here
 	Joystick(joystickPort);
 	inc(time);
@@ -449,8 +448,8 @@ begin
 	if (time > 200) then
 	begin
 		InitStartScreen();
-		start_game := 0;
 		time := 0;
+		start_game := 0;
 		RasterIRQ(StartRaster(),$00,useKernal);
 	end;
 	
@@ -605,8 +604,7 @@ begin
 		waitforraster(250);
 	end;*/
 
-	for i:=0 to 100 do waitforraster(0);
-
+	start_game := 0;
 
 	InitStartScreen();
 	StartRasterChain(StartRaster(),0,useKernal);		

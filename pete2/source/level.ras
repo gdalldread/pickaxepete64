@@ -2,6 +2,7 @@ var
 	// game progression parameters
 	level_num_ladders : byte = 5;
 	boulder_x_speed : byte = 7;
+
 	wait_key_ttl : byte = 255;
 	flash_key_ttl : byte = 80;
 	wait_pick_ttl : byte = 255;
@@ -15,8 +16,14 @@ var
 	// game progression sequences
 	// first value defines the level increment between each value
 	// second value defines how many in the sequence
-	level_num_ladders_seq : array[] of byte = (3, 5, 5, 4, 3, 2, 1);
-	boulder_x_speed_seq : array[] of byte = (10, 2, 6, 7);
+	level_num_ladders_seq : array[] of byte = (2, 5, 5, 4, 3, 2, 1);
+	boulder_x_speed_seq : array[] of byte = (20, 2, 6, 7);
+	item_wait_ttl_seq : array[] of byte = (3, 4, 255, 200, 150, 100);
+	start_pick_threshold_seq : array[] of byte = (5, 5, 150, 180, 200, 220, 254);
+	start_key_threshold_seq : array[] of byte = (5, 5, 64, 40, 32, 16, 5);
+	boulder_release_frequency_seq : array[] of byte = (10, 3, 1, 5, 10);
+
+	///////////////////////////////////////////
 
 	new_level_required : byte;
 	screencolor : pointer;
@@ -69,22 +76,17 @@ end;
 
 procedure SetLevelGameParameters();
 var 
-	//param_index : byte = 0;
 begin
-// score_level
-
-	// game progression parameters
-	//level_num_ladders : byte = 5;
-
-	// game progression sequences - first value defines the level increment between each value
-	//level_num_ladders_seq : array[] of byte = (1, 5, 4, 3, 2, 1);
-
-	// set the number of ladders
-	//param_index := score_level / level_num_ladders_seq[0];
-	//if (param_index > level_num_ladders_seq[1]) then param_index := level_num_ladders_seq[1];
-	
 	level_num_ladders := GetLevelParameter(#level_num_ladders_seq);
 	boulder_x_speed := GetLevelParameter(#boulder_x_speed_seq);
+
+	wait_key_ttl := GetLevelParameter(#item_wait_ttl_seq);
+	wait_pick_ttl := GetLevelParameter(#item_wait_ttl_seq);
+	hold_pick_ttl := GetLevelParameter(#item_wait_ttl_seq);
+
+	start_pick_threshold := GetLevelParameter(#start_pick_threshold_seq); // greater than
+	start_key_threshold := GetLevelParameter(#start_key_threshold_seq); // less than
+	boulder_release_frequency := GetLevelParameter(#boulder_release_frequency_seq);
 end;
 
 procedure CreateLevel();

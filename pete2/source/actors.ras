@@ -384,7 +384,7 @@ begin
 	actors[depete_idx].current_sprite := 0;
 	//actors[ip_idx].flip := 0;
 	actors[depete_idx].has_flipped_sprite := 0;
-	actors[dpete_idx].counter := 0;
+	actors[depete_idx].counter := 0;
 	actors[depete_idx].ttl := 64;
 	actors[depete_idx].animation_speed := 0;
 	actors[depete_idx].animation_counter := 0;
@@ -549,16 +549,16 @@ end;
 
 procedure WaitPick(wpi_idx : byte);
 begin
-	actors[spi_idx].x_velocity := 0;
-	actors[spi_idx].y_velocity := 0;
-	actors[spi_idx].animation := pick_wait_idx;
-	actors[spi_idx].current_sprite := 0;
-	actors[spi_idx].animation_speed := 0;
-	actors[spi_idx].ttl := wait_pick_ttl;//255;
-	actors[spi_idx].counter := 0;
-	actors[spi_idx].enabled := 1;
-	actors[spi_idx].flip := 0;
-	actors[spi_idx].flipy := 1;
+	actors[wpi_idx].x_velocity := 0;
+	actors[wpi_idx].y_velocity := 0;
+	actors[wpi_idx].animation := pick_wait_idx;
+	actors[wpi_idx].current_sprite := 0;
+	actors[wpi_idx].animation_speed := 0;
+	actors[wpi_idx].ttl := wait_pick_ttl;//255;
+	actors[wpi_idx].counter := 0;
+	actors[wpi_idx].enabled := 1;
+	actors[wpi_idx].flip := 0;
+	actors[wpi_idx].flipy := 1;
 	
 	StopPickSpinSound();
 
