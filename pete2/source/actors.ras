@@ -44,14 +44,17 @@ var
 	const pete_duck_idx : byte = 11;
 	pete_duck : array[7] of byte = (6,43,43,45,45,45,43);
 	
+	const pete_game_over_idx : byte = 12;
+	const pete_game_over_dead_idx : byte = 13;
+
 
 	/////////////////////////////////////////
 
 	const actor_ladder : byte = 1;
-	const ladder_roll_idx : byte = 12;
+	const ladder_roll_idx : byte = 15;
 	ladder_roll : array[20] of byte = (17,6,6,4,2,0,0,0,0,0,0,0,0,0,0,2,6,6);
 
-	const ladder_stop_idx : byte = 13;
+	const ladder_stop_idx : byte = 16;
 	ladder_stop : array[2] of byte = (1,0);
 
 	//////////////////////////////////////////
@@ -359,6 +362,48 @@ begin
 	actors[idx].current_sprite := 0;
 end;   
 
+// GameOverPete
+procedure GameOverPete(idx : byte);
+begin
+	actors[idx].x_velocity := 0;
+	actors[idx].y_velocity := pete_fall_speed;
+	actors[idx].x_skip := 2;
+	actors[idx].y_skip := 1;
+	
+	actors[idx].x := 150;
+	actors[idx].y := 20;
+
+	actors[idx].animation := pete_game_over_idx;
+	//actors[fp_idx].flip := 0;
+	actors[idx].flipy := 1;
+	actors[idx].animation_speed := 15;
+	actors[idx].has_flipped_sprite := 0;
+	actors[idx].animation_counter := 0;
+	actors[idx].x_move_counter := 0;
+	actors[idx].y_move_counter := 0;
+	actors[idx].current_sprite := 0;
+end;   
+
+procedure GameOverDeadPete(idx : byte);
+begin
+	actors[idx].x_velocity := 0;
+	actors[idx].y_velocity := 0;
+	actors[idx].x_skip := 2;
+	actors[idx].y_skip := 1;
+	
+	//actors[idx].x := 150;
+	//actors[idx].y := 20;
+
+	actors[idx].animation := pete_game_over_dead_idx;
+	//actors[fp_idx].flip := 0;
+	actors[idx].flipy := 1;
+	actors[idx].animation_speed := 15;
+	actors[idx].has_flipped_sprite := 0;
+	actors[idx].animation_counter := 0;
+	actors[idx].x_move_counter := 0;
+	actors[idx].y_move_counter := 0;
+	actors[idx].current_sprite := 0;
+end;   
 
 
 procedure DiePete(dpete_idx : byte);
@@ -1153,6 +1198,21 @@ begin
 
 end;
 
+
+
+procedure SetupGameOverActors();
+var
+begin
+
+	num_actors := 0;
+	
+	CreatePete(num_actors);
+	GameOverPete(num_actors);
+	inc(num_actors);
+
+end;
+
+
 procedure SetupActors();
 var
 sa_index: byte;
@@ -1641,13 +1701,13 @@ begin
 		return;
 	end;
 	
-	if (sta_anim_idx = pete_die_idx) then 
+	if ( (sta_anim_idx = pete_die_idx) or (sta_anim_idx = pete_game_over_idx)) then 
 	begin
 		temp_anim := #pete_die; 
 		return;
 	end;
 
-	if (sta_anim_idx = pete_dead_idx) then 
+	if ((sta_anim_idx = pete_dead_idx) or (sta_anim_idx = pete_game_over_dead_idx)) then 
 	begin
 		temp_anim := #pete_dead; 
 		return;

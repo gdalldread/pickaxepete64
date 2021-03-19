@@ -65,6 +65,243 @@ end;
 
 @startblock $4800 "GAME"
 
+procedure Draw16x16Character(char : byte, x_loc : integer, y_loc : integer, colour : byte);
+var
+start_char_loc : integer;
+begin
+
+	start_char_loc := 40 * y_loc + x_loc;// + 10;
+
+	screenmemory := #screen_char_loc3;// + $4000;		
+	screencolor := #screen_col_loc;
+
+	screenmemory := screenmemory + start_char_loc;
+	screenmemory[0] := char;					
+	screenmemory[1] := char+1;
+	screenmemory[40] := char+40;				
+	screenmemory[41] := char+41;		
+	
+	screencolor := screencolor + start_char_loc;
+	screencolor[0] := colour;
+	screencolor[1] := colour;
+	screencolor[40] := colour;
+	screencolor[41] := colour;
+		
+
+end;
+
+/*procedure SetupImage(data, color : pointer);
+begin
+	// Clear the screen & color ram first
+	clearbitmap(^$6000,32);	
+	clearscreen(black,^$D800);
+	clearscreen(black,^$4400);
+	// Decompress the color data
+	Compression::Decompress(color, #colorAddress); 
+	// Copy color data to color ram at $4400 and $D800
+	copyimagecolordata(#colorAddress,1);
+	// Decompress image data directly to the address
+	Compression::Decompress(data, #dataAddress); 
+end;*/
+
+
+
+procedure InitStartScreenSprites();
+var  
+begin
+	SetupStartScreenActors();
+
+	// Set all sprites to be multicolor
+	sprite_multicolor:=$ff;
+	// Set common sprite multicolor #1 
+	sprite_multicolor_reg1:=light_red;
+	// Set  common sprite multicolor #2 
+	sprite_multicolor_reg2:=white;
+	// Set sprite "0" individual color value 
+
+	sprite_stretch_x:=$FF;
+	sprite_stretch_y:=$FF;
+end;
+
+procedure InitGameOverScreenSprites();
+var  
+begin
+	SetupGameOverActors();
+
+	// Set all sprites to be multicolor
+	sprite_multicolor:=$ff;
+	// Set common sprite multicolor #1 
+	sprite_multicolor_reg1:=light_red;
+	// Set  common sprite multicolor #2 
+	sprite_multicolor_reg2:=white;
+	// Set sprite "0" individual color value 
+
+	sprite_stretch_x:=$FF;
+	sprite_stretch_y:=$FF;
+end;
+
+
+procedure InitStartScreen();
+var 
+	char_index : byte;
+	x, y, colour : byte;
+begin
+	definescreen();
+	SetBank(VIC_BANK2);
+
+	screen_bg_col:=black;
+	screen_fg_col:=black;
+
+	settextmode();
+	SetRegularColorMode();
+
+	clearscreen(32, screen_char_loc3);
+	clearscreen(blue, screen_col_loc);
+
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, red);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+
+	x := 8;
+	y := 2;
+	colour := yellow;
+	// pickaxe
+	Draw16x16Character(30, x, y, colour);
+	x := x + 2;
+
+	colour := blue;
+	Draw16x16Character(16, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(4, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(20, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(94, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 4;
+
+	//pete
+	colour := yellow;
+	Draw16x16Character(30, x, y, colour);
+	x := x + 2;
+	colour := blue;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(86, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	
+	// by
+	colour := green;
+	
+	x := 17;
+	y := 7;
+	Draw16x16Character(2, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(96, x, y, colour);
+	x := x + 2;
+
+	// gareth alldread
+	x := 5;
+	y := 10;
+	Draw16x16Character(12, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(82, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(86, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(14, x, y, colour);
+	x := x + 4;
+
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(22, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(22, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(6, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(82, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(6, x, y, colour);
+	
+	moveto(10,22,hi(screen_char_loc3));
+	printstring("PRESS FIRE TO START",0,40);
+	
+	InitStartScreenSprites();
+end;   
+
+procedure InitGameOverScreen();
+var 
+	char_index : byte;
+	x, y, colour : byte;
+begin
+	definescreen();
+	SetBank(VIC_BANK2);
+
+	screen_bg_col:=black;
+	screen_fg_col:=black;
+
+	settextmode();
+	SetRegularColorMode();
+
+	clearscreen(32, screen_char_loc3);
+	clearscreen(blue, screen_col_loc);
+
+	poke(MULTICOLOR_CHAR_COL, 0, black);
+	poke(MULTICOLOR_CHAR_COL, 2, red);
+	poke(MULTICOLOR_CHAR_COL, 1, green);
+
+	x := 10;
+	y := 6;
+	colour := yellow;
+	// game
+	Draw16x16Character(12, x, y, colour);
+	x := x + 2;
+
+	colour := blue;
+	Draw16x16Character(0, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(24, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 4;
+
+	//over
+	colour := yellow;
+	Draw16x16Character(28, x, y, colour);
+	x := x + 2;
+	colour := blue;
+	Draw16x16Character(90, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(8, x, y, colour);
+	x := x + 2;
+	Draw16x16Character(82, x, y, colour);
+	
+
+	if (BcdCompare( #game_score, #hi_score, 5 )) then
+	begin
+		moveto(12,20,hi(screen_char_loc3));
+		printstring("NEW HIGH SCORE!",0,40);
+		moveto(14,22,hi(screen_char_loc3));
+		BcdPrint(#game_score, 5 );
+		SetHighScore();
+	end;
+	
+	InitGameOverScreenSprites();
+end;   
+
 procedure CanFall( pcf_idx : byte );
 var
 	line_idx : byte;
@@ -220,7 +457,20 @@ begin
 
 
 	if (actors[petei].animation = pete_between_levels_idx) then return;
+	if (actors[petei].animation = pete_game_over_dead_idx) then return;
 
+	if (actors[petei].animation = pete_game_over_idx) then 
+	begin
+		if (actors[petei].y >= 120) then
+		begin
+			GameOverDeadPete(petei);
+			return;
+		end
+		else
+		begin
+			return;
+		end;
+	end;
 
 	CanFall(petei);
 	upHandled := 0;
