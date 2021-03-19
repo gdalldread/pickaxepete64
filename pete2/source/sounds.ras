@@ -813,7 +813,7 @@ begin
 		effects[nex_free_effect].sus_release := 0*16 + 9;
 		effects[nex_free_effect].waveform := sid_saw;
 		effects[nex_free_effect].modulation := notes_sound_modulation;
-		effects[nex_free_effect].modulation_delay := 20;
+		effects[nex_free_effect].modulation_delay := 19;
 		effects[nex_free_effect].modulation_notes := dead_notes_idx;
 		SetFirstNote(nex_free_effect);
 
