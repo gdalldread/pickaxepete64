@@ -337,6 +337,29 @@ begin
 	actors[btl_idx].current_sprite := 0;
 end;   
 
+// StartScreenPete
+procedure StartScreenPete(idx : byte);
+begin
+	actors[idx].x_velocity := 0;
+	actors[idx].y_velocity := 0;
+	actors[idx].x_skip := 2;
+	actors[idx].y_skip := 1;
+	
+	actors[idx].x := 150;
+	actors[idx].y := 150;
+
+	actors[idx].animation := pete_between_levels_idx;
+	//actors[fp_idx].flip := 0;
+	actors[idx].flipy := 1;
+	actors[idx].animation_speed := 15;
+	actors[idx].has_flipped_sprite := 0;
+	actors[idx].animation_counter := 0;
+	actors[idx].x_move_counter := 0;
+	actors[idx].y_move_counter := 0;
+	actors[idx].current_sprite := 0;
+end;   
+
+
 
 procedure DiePete(dpete_idx : byte);
 begin
@@ -1113,6 +1136,19 @@ begin
 	
 	CreatePete(num_actors);
 	BetweenLevelPete(num_actors);
+	inc(num_actors);
+
+end;
+
+procedure SetupStartScreenActors();
+var
+sbla_index: byte;
+begin
+
+	num_actors := 0;
+	
+	CreatePete(num_actors);
+	StartScreenPete(num_actors);
 	inc(num_actors);
 
 end;

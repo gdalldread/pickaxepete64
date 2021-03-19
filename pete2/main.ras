@@ -96,6 +96,24 @@ begin
 
 end;
 
+procedure InitStartScreenSprites();
+var  
+begin
+	SetupStartScreenActors();
+
+	// Set all sprites to be multicolor
+	sprite_multicolor:=$ff;
+	// Set common sprite multicolor #1 
+	sprite_multicolor_reg1:=light_red;
+	// Set  common sprite multicolor #2 
+	sprite_multicolor_reg2:=white;
+	// Set sprite "0" individual color value 
+
+	sprite_stretch_x:=$FF;
+	sprite_stretch_y:=$FF;
+end;
+
+
 procedure InitStartScreen();
 var 
 	char_index : byte;
@@ -104,14 +122,13 @@ begin
 	definescreen();
 	SetBank(VIC_BANK2);
 
-	screen_bg_col:=black;
+	screen_bg_col:=blue;
 	screen_fg_col:=black;
 
 	settextmode();
 	SetRegularColorMode();
-	setcharsetlocation(charsetLoc2);
 
-	clearscreen(160, screen_char_loc3);
+	clearscreen(32, screen_char_loc3);
 	clearscreen(blue, screen_col_loc);
 
 	poke(MULTICOLOR_CHAR_COL, 0, black);
@@ -129,7 +146,7 @@ begin
 	moveto(10,17,hi(screen_char_loc3));
 	printstring("PRESS FIRE TO START",0,40);*/
 
-	x := 7;
+	x := 8;
 	y := 2;
 	colour := yellow;
 	// pickaxe
@@ -164,7 +181,7 @@ begin
 	// by
 	colour := green;
 	
-	x := 16;
+	x := 17;
 	y := 7;
 	Draw16x16Character(2, x, y, colour);
 	x := x + 2;
@@ -172,7 +189,7 @@ begin
 	x := x + 2;
 
 	// gareth alldread
-	x := 4;
+	x := 5;
 	y := 10;
 	Draw16x16Character(12, x, y, colour);
 	x := x + 2;
@@ -202,7 +219,11 @@ begin
 	Draw16x16Character(0, x, y, colour);
 	x := x + 2;
 	Draw16x16Character(6, x, y, colour);
-
+	
+	moveto(10,22,hi(screen_char_loc3));
+	printstring("PRESS FIRE TO START",0,40);
+	
+	InitStartScreenSprites();
 end;   
 
 procedure InitGameOverScreen();
@@ -532,13 +553,31 @@ begin
 	closeirq();
 end;
 
+interrupt StartRaster();
 
+interrupt StartBottomHalf();
+var
+begin
+
+	startirq(1);
+	setcharsetlocation($1000);
+
+	//screen_bg_col:=green;
+
+	RasterIRQ(StartRaster(),$00,useKernal);
+
+	closeirq();
+end;
 // update the start screen
 interrupt StartRaster();
 var
 begin
 
 	startirq(1);
+	
+	//screen_bg_col:=black;
+	setcharsetlocation(charsetLoc2);
+
 	// Update joystick here
 	Joystick(joystickPort);
 	inc(time);
@@ -551,11 +590,22 @@ begin
 
 	end;
 
-	if (time&1 = 1) then UpdateAllSounds();
+	if (time&1 = 1) then
+	begin
+		UpdateAllSounds();
+		UpdateGameLogic();
+	end
+	else
+	begin
+		UpdateSprites(0);	
+	end;	
 
 	if ((start_game) and (time > 20)) then
 	begin
 		ResetAllSoundChannels();
+
+		DisableAllActors();
+		UpdateSprites(0);	
 
 		// start a new game
 		game_over := 0;
@@ -568,8 +618,11 @@ begin
 		DrawLevel();
 
 		RasterIRQ(GameTopHalf(),$00,useKernal);
+	end
+	else
+	begin
+		RasterIRQ(StartBottomHalf(),$D0,useKernal);
 	end;
-
 	closeirq();
 end;
 

@@ -355,7 +355,6 @@ begin
 
 	if (level_colour <> black) then
 	begin
-
 		for dbl_y := 0 to 25 do
 		begin
 
@@ -398,10 +397,10 @@ begin
 		end;
 	end
 	else
+	begin
 		clearscreen(blue, screen_col_loc);
 		moveto(11,15,hi(screen_char_loc3));
 		printstring("DOUBLE POINTS LEVEL!",0,40);
-	begin
 	end;
 end;
 
