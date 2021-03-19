@@ -11,10 +11,13 @@ var
 temp : pointer;
 val : byte;
 start_game : byte = 0;
+const useKernal : byte = 1;
 
 // Automatically export charset
 @export "charsets/combined.flf" "charsets/combined.bin" 120
 @export "charsets/charset_16x16.flf" "charsets/charset_16x16.bin" 180
+
+//sidfile: incsid("music/riding_it_Out.sid");
 
 // Export all sprites automatically on each build
 @export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
@@ -47,7 +50,6 @@ start_game : byte = 0;
 
 	i, time: byte = 0;
 	index: byte;
-	const useKernal : byte = 1;
 	
 	frame : byte = 0;
 	count : byte = 0;
@@ -374,7 +376,7 @@ interrupt GameTopHalf();
 interrupt GameBottomHalf();
 begin
 
-	startirq(1);
+	startirq(useKernal);
 	SetBank(VIC_BANK0);
 
 	screen_bg_col:=green;
@@ -391,7 +393,7 @@ interrupt StartBottomHalf();
 var
 begin
 
-	startirq(1);
+	startirq(useKernal);
 	setcharsetlocation($1000);
 
 	//screen_bg_col:=green;
@@ -405,10 +407,12 @@ interrupt StartRaster();
 var
 begin
 
-	startirq(1);
+	startirq(useKernal);
 	
 	//screen_bg_col:=black;
 	setcharsetlocation(charsetLoc2);
+	//call(sidfile_1_play);	
+
 
 	// Update joystick here
 	Joystick(joystickPort);
@@ -464,7 +468,7 @@ interrupt GameOverBottomHalf();
 var
 begin
 
-	startirq(1);
+	startirq(useKernal);
 	setcharsetlocation($1000);
 
 	//screen_bg_col:=green;
@@ -479,7 +483,7 @@ end;
 interrupt GameOverRaster();
 begin
 
-	startirq(1);
+	startirq(useKernal);
 	setcharsetlocation(charsetLoc2);
 
 	if (time&1 = 1) then
@@ -516,7 +520,7 @@ interrupt NewLevelRaster();
 begin
 
 
-	startirq(1);
+	startirq(useKernal);
 
 	// re-use game logic to animate pete
 	if (time&1 = 1) then
@@ -582,7 +586,7 @@ interrupt GameTopHalf();
 begin
 
 
-	startirq(1);
+	startirq(useKernal);
 
 	// every other frame update game logic	
 	if (time&1 = 1) then
@@ -646,7 +650,8 @@ end;
 
 // Main program
 begin
-	setmemoryconfig(1,1,0);
+	setmemoryconfig(1,useKernal,0);
+	//InitSid(sidfile_1_init);
 
 	/*InitSplashScreen();
 
