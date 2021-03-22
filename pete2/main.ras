@@ -8,6 +8,9 @@ program PickaxePete;
 
 var
 
+sidfile1: incsid("music/ACIDGAFFEL.sid",2);
+
+
 temp : pointer;
 val : byte;
 start_game : byte = 0;
@@ -17,7 +20,6 @@ const useKernal : byte = 1;
 @export "charsets/combined.flf" "charsets/combined.bin" 120
 @export "charsets/charset_16x16.flf" "charsets/charset_16x16.bin" 180
 
-//sidfile: incsid("music/riding_it_Out.sid");
 
 // Export all sprites automatically on each build
 @export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
@@ -411,7 +413,7 @@ begin
 	
 	//screen_bg_col:=black;
 	setcharsetlocation(charsetLoc2);
-	//call(sidfile_1_play);	
+	call(sidfile_1_play);	
 
 
 	// Update joystick here
@@ -651,7 +653,17 @@ end;
 // Main program
 begin
 	setmemoryconfig(1,useKernal,0);
-	//InitSid(sidfile_1_init);
+	//disableciainterrupts();	
+
+	moveto(10,20,hi(screen_char_loc));
+	printstring("BEFORE INITSID",0,40);
+
+
+	InitSid(sidfile_1_init);
+
+	moveto(10,22,hi(screen_char_loc));
+	printstring("AFTER INITSID",0,40);
+
 
 	/*InitSplashScreen();
 
@@ -662,8 +674,9 @@ begin
 		waitforraster(250);
 	end;*/
 
-	start_game := 0;
+	//start_game := 0;
 	InitStartScreen();
-	StartRasterChain(StartRaster(),0,useKernal);		
+
+	StartRasterChain(StartRaster(),$00,useKernal);		
 	Loop();
 end.
