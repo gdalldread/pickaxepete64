@@ -8,7 +8,7 @@ program PickaxePete;
 
 var
 
-sidfile1: incsid("music/ACIDGAFFEL.sid",2);
+sidfile1: incsid("music/PETE1.sid",2);
 
 
 temp : pointer;
@@ -407,14 +407,16 @@ end;
 // update the start screen
 interrupt StartRaster();
 var
+bp : pointer;
 begin
 
 	startirq(useKernal);
 	
 	//screen_bg_col:=black;
 	setcharsetlocation(charsetLoc2);
-	call(sidfile_1_play);	
 
+	//if (start_game = 0) then 
+	
 
 	// Update joystick here
 	Joystick(joystickPort);
@@ -424,12 +426,17 @@ begin
 	begin
 		start_game := 1;
 		time := 0;
-		PlayGameStartSound();
 
+		ResetSID();
+		
+		PlayGameStartSound();
 	end;
+
+	if (start_game = 0)	then call(sidfile_1_play);	
 
 	if (time&1 = 1) then
 	begin
+
 		UpdateAllSounds();
 		UpdateGameLogic();
 	end
@@ -440,6 +447,7 @@ begin
 
 	if ((start_game) and (time > 20)) then
 	begin
+
 		ResetAllSoundChannels();
 
 		DisableAllActors();
@@ -655,26 +663,18 @@ begin
 	setmemoryconfig(1,useKernal,0);
 	//disableciainterrupts();	
 
-	moveto(10,20,hi(screen_char_loc));
-	printstring("BEFORE INITSID",0,40);
-
-
 	InitSid(sidfile_1_init);
 
-	moveto(10,22,hi(screen_char_loc));
-	printstring("AFTER INITSID",0,40);
+	/*InitSplashScreen();*/
 
-
-	/*InitSplashScreen();
-
-	val := 0;	
+/*	val := 0;	
 	while val=0 do begin
 		Joystick(joystickPort);
 		if (joystickbutton) then val := 1;
 		waitforraster(250);
 	end;*/
 
-	//start_game := 0;
+	start_game := 0;
 	InitStartScreen();
 
 	StartRasterChain(StartRaster(),$00,useKernal);		

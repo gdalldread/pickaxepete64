@@ -107,6 +107,17 @@ begin
 end;
 
 
+procedure ResetSID();
+var 
+index : byte;
+begin
+		for index := 0 to 24 do	
+		begin		
+			sid[index] := $0;
+		end;
+end;
+
+
 procedure ResetSoundChannel(rsIndex : byte);
 begin
 	effects[rsIndex].enabled := 0;
