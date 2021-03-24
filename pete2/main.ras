@@ -4,7 +4,11 @@ program PickaxePete;
 @include "source/level.ras"
 @include "source/sounds.ras"
 @include "source/actors.ras"
+
+@startblock $4800 "GAME"
+@include "source/screen.ras"
 @include "source/game.ras"
+@endblock
 
 var
 
@@ -20,30 +24,14 @@ const useKernal : byte = 1;
 @export "charsets/combined.flf" "charsets/combined.bin" 120
 @export "charsets/charset_16x16.flf" "charsets/charset_16x16.bin" 180
 
-
 // Export all sprites automatically on each build
 @export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
-
-//@export "images/pete.flf" "images/pete.bin" 256
 
 
  	@define spriteLoc $b000
 	sprites:incbin("sprites/sprites.bin", @spriteLoc); 
-
-	// Location of charset
-	const charsetLoc: address = $8800;
 	image_data2 : incbin("charsets/combined.bin", charsetLoc);
-
-	const charsetLoc2: address = $a000;
 	image_data3 : incbin("charsets/charset_16x16.bin", charsetLoc2);
-
-
-/*@startblock $4800 "Data"
-	image1_color: IncBin("images/pete_color.bin")compressed;
-@endblock
-@startblock $9000 "Data"
-	image1_data: IncBin("images/pete_data.bin") compressed;
-@endblock*/
 	
 	// Address of screen bitmap data
 	const dataAddress : address = $6000;
@@ -58,139 +46,7 @@ const useKernal : byte = 1;
 
    	const joystickPort: byte = 2;
    	const useBank:byte = 2;
-  	
 
-
-
-/*procedure InitGameOverScreen();
-begin
-	definescreen();
-	SetBank(VIC_BANK0);
-
-	screen_bg_col:=black;
-	screen_fg_col:=black;
-
-	settextmode();
-	SetRegularColorMode();
-	setcharsetlocation($1000);
-
-	clearscreen(key_space, screen_char_loc);
-	clearscreen(blue, screen_col_loc);
-
-	setcharsetlocation($1000);
-	poke(MULTICOLOR_CHAR_COL, 0, black);
-	poke(MULTICOLOR_CHAR_COL, 2, red);
-	poke(MULTICOLOR_CHAR_COL, 1, green);
-
-	moveto(15,7,hi(screen_char_loc));
-	printstring("GAME OVER",0,40);
-	if (BcdCompare( #game_score, #hi_score, 5 )) then
-	begin
-		moveto(12,9,hi(screen_char_loc));
-		printstring("NEW HIGH SCORE!",0,40);
-		moveto(14,11,hi(screen_char_loc));
-		BcdPrint(#game_score, 5 );
-		SetHighScore();
-	end;
-end; */  
-
-/*
-procedure InitSplashScreen();
-begin
-	setbank(vic_bank1);
-	setmulticolormode();
-	setbitmapmode();
-	//disableciainterrupts();
-	screen_fg_col:=black;
-	screen_bg_col:=black;
-	// Set data pointer to $6000
-	vic_data_loc:=$18;
-	SetupImage(#image1_data, #image1_color);		
-end;   
-*/
-
-// This method initializes the game screen
-procedure InitGameScreen();
-begin
-	definescreen();
-	SetBank(VIC_BANK2);
-
-	screen_bg_col:=black;
-	screen_fg_col:=black;
-	clearscreen(key_space, screen_char_loc3);
-	
-	settextmode();
-	setmulticolormode();
-
-	setcharsetlocation(charsetLoc);
-	poke(MULTICOLOR_CHAR_COL, 0, black);
-	poke(MULTICOLOR_CHAR_COL, 2, level_colour);
-	poke(MULTICOLOR_CHAR_COL, 1, green);
-end;   
-
-procedure InitBetweenLevelsScreen();
-begin
-	definescreen();
-	SetBank(VIC_BANK2);
-
-	screen_bg_col:=black;
-	screen_fg_col:=blue;
-	clearscreen(key_space, screen_char_loc3);
-	
-	settextmode();
-
-	
-	if (level_colour = black) then
-	begin	
-		SetRegularColorMode();
-		setcharsetlocation($1000);
-	end
-	else
-	begin
-		setcharsetlocation(charsetLoc);
-		setmulticolormode();
-	end;
-
-	poke(MULTICOLOR_CHAR_COL, 0, black);
-	poke(MULTICOLOR_CHAR_COL, 2, level_colour);
-	poke(MULTICOLOR_CHAR_COL, 1, green);
-end;   
-
-
-// This method initializes the sprites
-procedure InitSprites();
-var  
-begin
-	SetupActors();
-
-	// Set all sprites to be multicolor
-	sprite_multicolor:=$ff;
-	// Set common sprite multicolor #1 
-	sprite_multicolor_reg1:=light_red;
-	// Set  common sprite multicolor #2 
-	sprite_multicolor_reg2:=white;
-	// Set sprite "0" individual color value 
-	
-	sprite_stretch_x:=$0;
-	sprite_stretch_y:=$0;
-end;
-
-procedure InitBetweenLevelSprites();
-var  
-begin
-	SetupBetweenLevelActors();
-
-	// Set all sprites to be multicolor
-	sprite_multicolor:=$ff;
-	// Set common sprite multicolor #1 
-	sprite_multicolor_reg1:=light_red;
-	// Set  common sprite multicolor #2 
-	sprite_multicolor_reg2:=white;
-	// Set sprite "0" individual color value 
-
-	sprite_stretch_x:=$FF;
-	sprite_stretch_y:=$FF;
-end;
 
 // update the game play logic
 procedure UpdateGameLogic();
@@ -283,7 +139,7 @@ end;
 
 
 // update the sprites and animated tiles
-procedure UpdateSprites(segment : byte);
+procedure UpdateGraphics();
 var  
 	sprite_data_index : byte;	
 	animation_index : byte;
@@ -398,8 +254,6 @@ begin
 	startirq(useKernal);
 	setcharsetlocation($1000);
 
-	//screen_bg_col:=green;
-
 	RasterIRQ(StartRaster(),$00,useKernal);
 
 	closeirq();
@@ -415,8 +269,6 @@ begin
 	//screen_bg_col:=black;
 	setcharsetlocation(charsetLoc2);
 
-	//if (start_game = 0) then 
-	
 
 	// Update joystick here
 	Joystick(joystickPort);
@@ -442,7 +294,7 @@ begin
 	end
 	else
 	begin
-		UpdateSprites(0);	
+		UpdateGraphics();	
 	end;	
 
 	if ((start_game) and (time > 20)) then
@@ -451,7 +303,7 @@ begin
 		ResetAllSoundChannels();
 
 		DisableAllActors();
-		UpdateSprites(0);	
+		UpdateGraphics();	
 
 		// start a new game
 		game_over := 0;
@@ -503,7 +355,7 @@ begin
 	end
 	else
 	begin
-		UpdateSprites(0);	
+		UpdateGraphics();	
 	end;	
 
 
@@ -540,7 +392,7 @@ begin
 	end
 	else
 	begin
-		UpdateSprites(0);	
+		UpdateGraphics();	
 	end;	
 
 	// use colour rotation for the screen animation
@@ -574,7 +426,7 @@ begin
 	if (time > 128) then
 	begin
 		DisableAllActors();
-		UpdateSprites(0);	
+		UpdateGraphics();	
 		ResetAllSoundChannels();
 		UpdateAllSounds();
 
@@ -608,7 +460,7 @@ begin
 	else
 	// every other frame update the sprites
 	begin
-		UpdateSprites(0);	
+		UpdateGraphics();	
 	end;
 	inc(time);
 
@@ -617,7 +469,7 @@ begin
 	begin
 		InitBetweenLevelsScreen();
 		DisableAllActors();
-		UpdateSprites(0);	
+		UpdateGraphics();	
 		ResetAllSoundChannels();
 		UpdateAllSounds();
 
@@ -643,7 +495,7 @@ begin
 	if (game_over = 1) then
 	begin
 		DisableAllActors();
-		UpdateSprites(0);	
+		UpdateGraphics();	
 		InitGameOverScreen();
 		ResetAllSoundChannels();
 		UpdateAllSounds();
@@ -661,22 +513,9 @@ end;
 // Main program
 begin
 	setmemoryconfig(1,useKernal,0);
-	//disableciainterrupts();	
-
 	InitSid(sidfile_1_init);
-
-	/*InitSplashScreen();*/
-
-/*	val := 0;	
-	while val=0 do begin
-		Joystick(joystickPort);
-		if (joystickbutton) then val := 1;
-		waitforraster(250);
-	end;*/
-
 	start_game := 0;
 	InitStartScreen();
-
 	StartRasterChain(StartRaster(),$00,useKernal);		
 	Loop();
 end.
