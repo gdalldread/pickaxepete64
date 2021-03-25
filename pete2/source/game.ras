@@ -864,7 +864,7 @@ begin
 	if(Collision(upi, upPetei) = 1) then
 	begin
 		actors[upPetei].portal_hit := 1;
-		if (actors[upPetei].flashing = 0) then
+		if (actors[upPetei].flashing = 1) then
 		begin
 			new_level_required := 1;
 			level_colour := actors[upi].color;
