@@ -3,8 +3,10 @@
 
 var
 
-	const charsetLoc: address = $8800;
+	const charsetLoc: address = $a800;
 	const charsetLoc2: address = $a000;
+ //	@define spriteLoc $b000
+ 	@define spriteLoc $b000
 
 
 procedure Draw16x16Character(char : byte, x_loc : integer, y_loc : integer, colour : byte);

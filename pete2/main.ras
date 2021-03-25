@@ -12,7 +12,12 @@ program PickaxePete;
 
 var
 
+isNotDone : byte=true;
+key : byte = 0;
+
+
 sidfile1: incsid("music/PETE1.sid",2);
+sidfile2: incsid("music/PETE-GMOVER.sid",2);
 
 
 temp : pointer;
@@ -28,7 +33,6 @@ const useKernal : byte = 1;
 @export "sprites/sprites.flf" "sprites/sprites.bin" 256 	  	
 
 
- 	@define spriteLoc $b000
 	sprites:incbin("sprites/sprites.bin", @spriteLoc); 
 	image_data2 : incbin("charsets/combined.bin", charsetLoc);
 	image_data3 : incbin("charsets/charset_16x16.bin", charsetLoc2);
@@ -362,6 +366,8 @@ begin
 	end
 	else
 	begin
+		call(sidfile_2_play);	
+
 		RasterIRQ(GameOverBottomHalf(),$A0,useKernal);
 	end;
 	
@@ -507,11 +513,25 @@ end;
 begin
 	setmemoryconfig(1,useKernal,0);
 	InitSid(sidfile_1_init);
+	InitSid(sidfile_2_init);
 	start_game := 0;
+
+	
+/*	isNotDone:=true;
+
+	while (isNotDone) do
+	begin
+		key:=getKey();
+		if (key = key_space) then isNotDone := false;
+	end;	*/
 
 	CreateAnimationLookupTable();
 
 	InitStartScreen();
 	StartRasterChain(StartRaster(),$00,useKernal);		
+
+	//InitGameOverScreen();
+	//StartRasterChain(GameOverRaster(),$00,useKernal);		
+
 	Loop();
 end.
