@@ -1,3 +1,6 @@
+// this file contains code related to setting up and drawing the screen
+
+
 var
 
 	const charsetLoc: address = $8800;

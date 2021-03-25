@@ -1,3 +1,6 @@
+// this file contains code related to drawing the level and maintaining the score etc
+
+
 var  
 	// game progression parameters
 	level_num_ladders : byte = 5;

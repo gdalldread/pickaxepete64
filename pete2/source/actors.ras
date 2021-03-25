@@ -1,3 +1,5 @@
+// This file contains all code related to the various actors and actor states in the game
+
 var  
 	//////////////////
 	const pete_walk_speed : byte = 7;
@@ -12,6 +14,9 @@ var
 	//	and also indicate the current state of the actor
 	//	The arrays are indexes for the animation frames.
 	// 	the first element shows how many steps will follow.
+	//
+	//	These values are copied into a lookup table when the game
+	// 	loads.  This is kept here as it make maintenance easier.
 	//////////////////
 	const actor_pete : byte = 0;
 	const pete_walk_idx : byte = 0;
@@ -123,6 +128,11 @@ var
 
 	///////////////////////////////////////////
 	const next_animation_idx : byte = 37;
+
+	// lookup tables to use less cpu cycles at runtime	
+	animation_lookup_index : array[next_animation_idx] of byte;
+	animation_lookup_data : array[255] of byte;
+
 	///////////////////////////////////////////
 
 	const actor_type_sprite : byte = 0;
@@ -135,7 +145,7 @@ var
 
 	temp_anim : pointer;
 
-	// Monsterbtw: since the difference between hybrid/ multicolor/hires doesn't seem to be that big in terms of code, perhaps we should instead have a drop down list that lets you select multicolor type : record	
+	// a record holding the state of an actor
 	actor_type = record
 		enabled : byte = 1;
 		actor_index : byte;
@@ -174,8 +184,8 @@ var
 	actors : array[max_actors] of actor_type;
 	num_actors : byte = 0;
 
-	sprite_indexes : array[max_actors] of byte;
-	sprite_indexes_valid : byte = 0;
+	//sprite_indexes : array[max_actors] of byte;
+	//sprite_indexes_valid : byte = 0;
 	
 	bottom_portal : byte = 0;
 	pick_index : byte = 0;
@@ -1205,7 +1215,6 @@ begin
 	pete_index := 0;
 	bottom_portal := 3;
 
-	sprite_indexes_valid := 0;
 	num_actors := 0;
 
 	for sa_index := 0 to max_actors do	
@@ -1692,22 +1701,62 @@ end;
 
 // create animation lookup as the above function is quite slow
 procedure CreateAnimationLookupTable();
+var i,j : byte;
+var offset : byte;
 begin
-	// 
+
+	offset := 0;
+	// go through each animation index
+	for i := 0 to next_animation_idx do
+	begin
+		// store the current offset into offsets array
+		animation_lookup_index[i] := offset;
+
+		// get the animation array
+		SetTempAnim(i);
+		
+		// copy contents of animation array to lookup array
+		animation_lookup_data[offset] := temp_anim[0];
+		inc(offset);
+		for j := 0 to temp_anim[0] do // number of steps
+		begin
+			animation_lookup_data[offset] := temp_anim[j+1];
+			// move offset on
+			inc(offset);
+		end;
+	end;
+
 end;
 
 // create method to lookup sprite index based on animation id and index
 // uses if to set local pointer to the right animation array
 // then gets the sprite number from the index and returns it
-function GetSpriteIndex( anim_idx, idx : byte ) : byte;
+/*function GetSpriteIndex( anim_idx, idx : byte ) : byte;
 begin
 	SetTempAnim(anim_idx);
    	GetSpriteIndex := temp_anim[idx + 1]; 
+end;*/
+
+function GetSpriteIndex( anim_idx, idx : byte ) : byte;
+var
+offset : byte;
+begin
+	offset := animation_lookup_index[anim_idx];
+	offset := offset + idx + 1;
+   	GetSpriteIndex := animation_lookup_data[offset]; 
 end;
 
 function GetNumAnimationSteps( gnas_anim_idx : byte ) : byte;
+var
+offset : byte;
+begin
+	offset := animation_lookup_index[gnas_anim_idx];
+   	GetNumAnimationSteps := animation_lookup_data[offset]; 
+end;
+
+/*function GetNumAnimationSteps( gnas_anim_idx : byte ) : byte;
 begin
 	SetTempAnim(gnas_anim_idx);
    	GetNumAnimationSteps := temp_anim[0]; 
-end;
+end;*/
 

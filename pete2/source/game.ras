@@ -1,11 +1,12 @@
+// this file contains code to update the game state based on events
+
+
 function Collision( col_idx1, col_idx2 : byte ) :byte;
 var
 	x1, y1, x2, y2, width, height, overlaps : byte;
 begin
 	width := 6;
-	//width := 12;
 	height := 8;
-	//height := 10;
 	overlaps := 0;
 	// all x coords must be halved to fit in a single byte
 	// calculate x1, y1, different calc if a tile
@@ -893,22 +894,9 @@ begin
 			StartFreeBoulderFromTileCoords(actors[upi].x - 1 , actors[upi].yt, 0);
 		end;
 	end;
-/*
-StartBoulder(sb_idx : byte, sb_x : integer, sb_y : byte);
-
-	  local i = flr(rnd(300))
-	   if (i == 66) then
-		 create_boulder(60+7,o.y,true)
-	   end
-	   if (i == 123) then
-		 create_boulder(60-7,o.y,false)
-	   end
-*/
 
 	end;
 
-//moveto((ulLadderi-1)*10,24,hi(screen_char_loc));
-//printdecimal(col_detected, 4);	
 
 
 end;

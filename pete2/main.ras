@@ -153,8 +153,6 @@ begin
 sprite_number := 0;
 num_ladders := 0;
 
-
-
 for index := 0 to num_actors do	
 	begin		
 
@@ -164,7 +162,7 @@ for index := 0 to num_actors do
 			if (actors[index].actor_type = actor_type_sprite)then
 			begin
 
-				sprite_indexes[index] := sprite_number;
+				//sprite_indexes[index] := sprite_number;
 			
 				if (( actors[index].counter & 1 = 1) and (actors[index].flashing = 1)) then
 				begin
@@ -225,7 +223,7 @@ for index := 0 to num_actors do
 
 	end;
 
-	sprite_indexes_valid := 1;
+	//sprite_indexes_valid := 1;
 end;
 
 interrupt GameTopHalf();
@@ -239,7 +237,6 @@ begin
 
 	screen_bg_col:=green;
 	setcharsetlocation($1000); 
-	//setregularcolormode();
 
 	RasterIRQ(GameTopHalf(),$00,useKernal);
 	closeirq();
@@ -265,8 +262,6 @@ bp : pointer;
 begin
 
 	startirq(useKernal);
-	
-	//screen_bg_col:=black;
 	setcharsetlocation(charsetLoc2);
 
 
@@ -280,7 +275,6 @@ begin
 		time := 0;
 
 		ResetSID();
-		
 		PlayGameStartSound();
 	end;
 
@@ -297,6 +291,7 @@ begin
 		UpdateGraphics();	
 	end;	
 
+	// start game after a small delay
 	if ((start_game) and (time > 20)) then
 	begin
 
@@ -332,8 +327,6 @@ begin
 
 	startirq(useKernal);
 	setcharsetlocation($1000);
-
-	//screen_bg_col:=green;
 
 	RasterIRQ(GameOverRaster(),$00,useKernal);
 
@@ -443,7 +436,7 @@ begin
 	closeirq();
 end;
 
-// main game screen update
+// main game screen update - bottom half is only used for debug
 interrupt GameTopHalf();
 begin
 
@@ -515,6 +508,9 @@ begin
 	setmemoryconfig(1,useKernal,0);
 	InitSid(sidfile_1_init);
 	start_game := 0;
+
+	CreateAnimationLookupTable();
+
 	InitStartScreen();
 	StartRasterChain(StartRaster(),$00,useKernal);		
 	Loop();
