@@ -318,7 +318,7 @@ begin
 	end
 	else
 	begin
-		RasterIRQ(StartBottomHalf(),$D0,useKernal);
+		RasterIRQ(StartBottomHalf(),$60,useKernal);
 	end;
 	closeirq();
 end;

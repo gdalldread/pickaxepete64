@@ -89,6 +89,7 @@ procedure InitStartScreen();
 var 
 	char_index : byte;
 	x, y, colour : byte;
+	colourptr : pointer;
 begin
 	definescreen();
 	SetBank(VIC_BANK2);
@@ -100,6 +101,7 @@ begin
 	SetRegularColorMode();
 
 	clearscreen(32, screen_char_loc3);
+	//clearscreen(0, screen_char_loc3);
 	clearscreen(blue, screen_col_loc);
 
 	poke(MULTICOLOR_CHAR_COL, 0, black);
@@ -140,7 +142,7 @@ begin
 	
 	// by
 
-	colour := green;
+/*	colour := green;
 	
 	x := 17;
 	y := 7;
@@ -148,9 +150,9 @@ begin
 	x := x + 2;
 	Draw16x16Character(96, x, y, colour);
 	x := x + 2;
-
+*/
 	// gareth alldread
-	x := 5;
+/*	x := 5;
 	y := 10;
 	Draw16x16Character(12, x, y, colour);
 	x := x + 2;
@@ -179,7 +181,24 @@ begin
 	x := x + 2;
 	Draw16x16Character(0, x, y, colour);
 	x := x + 2;
-	Draw16x16Character(6, x, y, colour);
+	Draw16x16Character(6, x, y, colour);*/
+	
+	colourptr := #screen_col_loc;
+	colourptr := colourptr + (8*40) + 18;
+	Fill(colourptr, green, 2);
+	//colourptr[0] := green;
+
+	moveto(18,8,hi(screen_char_loc3));
+	printstring("BY",0,40);
+
+
+	colourptr := #screen_col_loc;
+	colourptr := colourptr + (10*40) + 11;
+	Fill(colourptr, green, 15);
+
+	moveto(11,10,hi(screen_char_loc3));
+	printstring("GARETH ALLDREAD",0,40);
+
 	
 	moveto(10,22,hi(screen_char_loc3));
 	printstring("PRESS FIRE TO START",0,40);
