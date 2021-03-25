@@ -362,6 +362,7 @@ begin
 		InitStartScreen();
 		time := 0;
 		start_game := 0;
+		InitSid(sidfile_1_init);
 		RasterIRQ(StartRaster(),$00,useKernal);
 	end
 	else
@@ -502,6 +503,8 @@ begin
 		time := 0;
 		count := 5;
 		frame := 0;
+		InitSid(sidfile_2_init);
+	
 		RasterIRQ(GameOverRaster(),$00,useKernal);
 	end;
 	closeirq();
@@ -513,7 +516,6 @@ end;
 begin
 	setmemoryconfig(1,useKernal,0);
 	InitSid(sidfile_1_init);
-	InitSid(sidfile_2_init);
 	start_game := 0;
 
 	

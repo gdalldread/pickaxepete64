@@ -97,6 +97,9 @@ begin
 	screen_bg_col:=black;
 	screen_fg_col:=black;
 
+	//screen_bg_col:=blue;
+
+
 	settextmode();
 	SetRegularColorMode();
 
@@ -184,19 +187,19 @@ begin
 	Draw16x16Character(6, x, y, colour);*/
 	
 	colourptr := #screen_col_loc;
-	colourptr := colourptr + (8*40) + 18;
+	colourptr := colourptr + (8*40) + 19;
 	Fill(colourptr, green, 2);
 	//colourptr[0] := green;
 
-	moveto(18,8,hi(screen_char_loc3));
+	moveto(19,8,hi(screen_char_loc3));
 	printstring("BY",0,40);
 
 
 	colourptr := #screen_col_loc;
-	colourptr := colourptr + (10*40) + 11;
+	colourptr := colourptr + (10*40) + 12;
 	Fill(colourptr, green, 15);
 
-	moveto(11,10,hi(screen_char_loc3));
+	moveto(12,10,hi(screen_char_loc3));
 	printstring("GARETH ALLDREAD",0,40);
 
 	
@@ -216,6 +219,9 @@ begin
 
 	screen_bg_col:=black;
 	screen_fg_col:=black;
+	
+	//screen_bg_col:=blue;
+
 
 	settextmode();
 	SetRegularColorMode();
@@ -227,7 +233,7 @@ begin
 	poke(MULTICOLOR_CHAR_COL, 2, red);
 	poke(MULTICOLOR_CHAR_COL, 1, green);
 
-	x := 10;
+	x := 11;
 	y := 6;
 	colour := yellow;
 	// game

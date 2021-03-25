@@ -365,7 +365,7 @@ begin
 	actors[idx].x_skip := 2;
 	actors[idx].y_skip := 1;
 	
-	actors[idx].x := 150;
+	actors[idx].x := 160;
 	actors[idx].y := 150;
 
 	actors[idx].animation := pete_between_levels_idx;
@@ -387,7 +387,7 @@ begin
 	actors[idx].x_skip := 2;
 	actors[idx].y_skip := 1;
 	
-	actors[idx].x := 150;
+	actors[idx].x := 160;
 	actors[idx].y := 20;
 
 	actors[idx].animation := pete_game_over_idx;
@@ -1109,7 +1109,7 @@ begin
 
 	//if (actors[spt_idx].color = yellow) then inc(actors[spt_idx].color);
 
-	if (random() = 64) then actors[spt_idx].color := black;
+	if (random() > 240) then actors[spt_idx].color := black;
 		
 	//rand(1,7,actors[spt_idx].color);
 	actors[spt_idx].animation := portal_stop_idx;
