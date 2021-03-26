@@ -16,7 +16,7 @@ isNotDone : byte=true;
 key : byte = 0;
 
 
-sidfile1: incsid("music/PETE1.sid",2);
+sidfile1: incsid("music/PETE-MAIN.sid",2);
 sidfile2: incsid("music/PETE-GMOVER.sid",2);
 
 
